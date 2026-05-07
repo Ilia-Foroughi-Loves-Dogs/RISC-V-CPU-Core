@@ -28,7 +28,8 @@ make test-core
 
 This compiles the single-cycle CPU and runs `tb/tb_riscv_core.sv`. The testbench
 prints a cycle-by-cycle trace showing the cycle count, PC, instruction, ALU
-result, and writeback data. It also performs final self-checks using `$error`.
+result, and writeback data. The same output is saved to
+`sim/logs/riscv_core.log`. It also performs final self-checks using `$error`.
 
 Generate a waveform for the integrated CPU test with:
 

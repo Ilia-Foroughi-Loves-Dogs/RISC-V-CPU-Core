@@ -89,19 +89,20 @@ The project is intended to use common hardware design tools:
 - GNU Make for repeatable build and simulation commands
 - RISC-V GNU toolchain for assembling test programs in later phases
 
-Exact simulator commands and tool versions will be documented as the
-implementation and test flow are added.
+The current simulation flow uses Icarus Verilog with `iverilog -g2012` and
+`vvp`. Makefile targets compile simulations into `sim/build/`, write core logs
+into `sim/logs/`, and write core waveforms into `sim/waves/`.
 
 ## Repository Structure
 
 ```text
 RISC-V-CPU-Core/
 ├── docs/             # Architecture, ISA, control, testing, and planning docs
-├── rtl/              # Future SystemVerilog RTL modules
-├── tb/               # Future testbenches
+├── rtl/              # SystemVerilog RTL modules
+├── tb/               # SystemVerilog testbenches
 ├── sim/              # Simulation build outputs, waveforms, and logs
 ├── tests/
-│   └── programs/     # Future RISC-V assembly or machine-code tests
+│   └── programs/     # RISC-V assembly and machine-code test programs
 ├── scripts/          # Future helper scripts
 ├── Makefile
 ├── LICENSE
