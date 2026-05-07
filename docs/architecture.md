@@ -93,8 +93,54 @@ The following standalone modules are implemented under `rtl/`:
 | `instruction_memory` | Provides simple simulation-only instruction storage loaded from `tests/programs/program.mem`. |
 | `data_memory` | Provides simple simulation-only word-addressed data memory with combinational reads and synchronous writes. |
 
-These modules are intentionally not integrated into a full CPU yet. Full
-single-cycle core assembly is planned for the next implementation phase.
+These modules are now integrated by the Phase 3 single-cycle core.
+
+## Phase 3 Single-Cycle Core Integration
+
+The Phase 3 core connects the Phase 2 blocks into one single-cycle datapath.
+Each instruction is fetched, decoded, executed, and committed using the current
+PC value in one architectural cycle.
+
+High-level datapath flow:
+
+1. The program counter provides the current instruction address.
+2. Instruction memory returns the 32-bit instruction at that PC.
+3. The core decodes `opcode`, `funct3`, `funct7`, `rs1`, `rs2`, and `rd`.
+4. The control unit selects register write, ALU source, memory access, branch,
+   jump, ALU operation class, and immediate format signals.
+5. The register file reads `rs1` and `rs2` while the immediate generator builds
+   the sign-extended immediate.
+6. The ALU executes arithmetic, logical, shift, compare, address, or AUIPC
+   addition work.
+7. Data memory is accessed for `lw` and `sw`.
+8. The writeback mux selects the value written to `rd`.
+9. Next-PC logic chooses the address for the next cycle.
+
+Writeback selection:
+
+| Instruction class | Writeback value |
+| --- | --- |
+| R-type and I-type ALU | ALU result |
+| `lw` | Data memory read data |
+| `jal`, `jalr` | `PC + 4` |
+| `lui` | U-type immediate |
+| `auipc` | `PC + U-type immediate` |
+
+Next-PC logic:
+
+| Flow | Next PC |
+| --- | --- |
+| Normal instruction | `PC + 4` |
+| Taken branch | `PC + B-type immediate` |
+| `jal` | `PC + J-type immediate` |
+| `jalr` | `(rs1 + I-type immediate) & 32'hffff_fffe` |
+
+Branch and jump handling is intentionally simple in the single-cycle core.
+Branches are resolved directly from the register operands in the same cycle:
+`beq` compares equality, `bne` compares inequality, `blt` uses signed less-than,
+and `bge` uses signed greater-than-or-equal. `jal` uses the J-type immediate
+relative to the current PC, while `jalr` uses `rs1 + immediate` with bit 0
+cleared as required by RV32I.
 
 ## Planned 5-Stage Pipeline
 

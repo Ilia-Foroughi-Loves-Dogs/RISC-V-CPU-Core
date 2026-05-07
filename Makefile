@@ -1,4 +1,15 @@
-.PHONY: help clean test test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules
+.PHONY: help clean test test-core wave-core test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules
+
+CORE_RTL = \
+	rtl/program_counter.sv \
+	rtl/instruction_memory.sv \
+	rtl/register_file.sv \
+	rtl/immediate_generator.sv \
+	rtl/control_unit.sv \
+	rtl/alu_control.sv \
+	rtl/alu.sv \
+	rtl/data_memory.sv \
+	rtl/riscv_core.sv
 
 help:
 	@echo "RISC-V CPU Core"
@@ -6,6 +17,8 @@ help:
 	@echo "Available targets:"
 	@echo "  make help             Show this help message"
 	@echo "  make test             Run project tests"
+	@echo "  make test-core        Run the integrated single-cycle CPU test"
+	@echo "  make wave-core        Run the CPU test and generate sim/riscv_core.vcd"
 	@echo "  make test-modules     Run all Phase 2 module tests"
 	@echo "  make test-pc          Test the program counter"
 	@echo "  make test-regfile     Test the register file"
@@ -16,10 +29,20 @@ help:
 	@echo "  make test-dmem        Test the data memory"
 	@echo "  make clean            Remove generated simulation and build outputs"
 
-test: test-modules
+test: test-modules test-core
 
 build:
 	@mkdir -p build
+
+sim:
+	@mkdir -p sim
+
+test-core: build sim
+	iverilog -g2012 -o build/tb_riscv_core.out $(CORE_RTL) tb/tb_riscv_core.sv
+	vvp build/tb_riscv_core.out
+
+wave-core: test-core
+	@echo "Waveform written to sim/riscv_core.vcd"
 
 test-pc: build
 	iverilog -g2012 -o build/tb_program_counter.out rtl/program_counter.sv tb/tb_program_counter.sv
@@ -54,4 +77,4 @@ test-modules: test-pc test-regfile test-alu test-immgen test-control test-alu-co
 clean:
 	@echo "Cleaning generated files..."
 	@rm -rf build sim/build obj_dir xsim.dir work
-	@rm -f *.vcd *.fst *.ghw *.wdb *.jou *.log *.pb *.o *.out
+	@rm -f sim/riscv_core.vcd *.vcd *.fst *.ghw *.wdb *.jou *.log *.pb *.o *.out

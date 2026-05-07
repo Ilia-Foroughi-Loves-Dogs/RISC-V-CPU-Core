@@ -19,6 +19,7 @@ work/
 *.bin
 *.hex
 *.mem
+!tests/programs/*.mem
 build/
 sim/build/
 obj_dir/

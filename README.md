@@ -2,7 +2,7 @@
 
 A portfolio-level RISC-V CPU core project written in SystemVerilog.
 
-Current status: Phase 2 - Core Datapath Modules
+Current status: Phase 3 - Single-Cycle CPU Integration
 
 ## Project Overview
 
@@ -67,8 +67,8 @@ encodings, and behavior notes.
 
 - Phase 0 - Project setup: complete
 - Phase 1 - ISA definition and CPU scope: complete
-- Phase 2 - Core datapath modules: current
-- Phase 3 - Single-cycle CPU integration
+- Phase 2 - Core datapath modules: complete
+- Phase 3 - Single-cycle CPU integration: current
 - Phase 4 - Simulation and testbench system
 - Phase 5 - Instruction test programs
 - Phase 6 - Documentation and diagrams
@@ -122,6 +122,14 @@ single-cycle CPU datapath:
 - `instruction_memory`
 - `data_memory`
 
+## Phase 3 Single-Cycle Core
+
+Phase 3 integrates the Phase 2 blocks into `rtl/riscv_core.sv`, with
+`rtl/riscv_top.sv` providing a simple wrapper. The CPU can now fetch and execute
+a small program from instruction memory, perform register and ALU operations,
+use word load/store through data memory, and update the PC for normal,
+branch, and jump flows in the supported RV32I subset.
+
 ## How to Run Tests
 
 Run all current module-level tests with:
@@ -130,14 +138,21 @@ Run all current module-level tests with:
 make test-modules
 ```
 
-The current tests are focused on individual Phase 2 modules. Full CPU
-integration tests will be added after the single-cycle core is assembled in a
-later phase.
+Run the integrated single-cycle CPU test with:
+
+```sh
+make test-core
+```
+
+Generate the CPU waveform at `sim/riscv_core.vcd` with:
+
+```sh
+make wave-core
+```
 
 ## Future Improvements
 
-- Implement the single-cycle datapath and control unit
-- Add focused module-level testbenches
+- Add more instruction-level test programs
 - Add instruction-level and small-program simulation tests
 - Add waveform-based debugging examples
 - Add architecture diagrams for the datapath and control flow
