@@ -1,26 +1,42 @@
 # RISC-V CPU Core
 
-A portfolio-level RISC-V CPU core project written in Verilog/SystemVerilog.
-The project will start with a clear, testable RV32I single-cycle processor and
-grow into a more complete CPU design with structured documentation,
-simulation support, and verification infrastructure.
+A portfolio-level RISC-V CPU core project written in SystemVerilog.
 
-## Project Goals
+Current status: Phase 1 - ISA Definition and CPU Scope
 
-- Build a clean and understandable RV32I CPU core from the ground up.
-- Keep the design modular, documented, and easy to simulate.
-- Develop a strong verification workflow using testbenches and small RISC-V
-  programs.
-- Create a professional hardware project suitable for portfolio review.
-- Grow the design in phases instead of implementing every feature at once.
+## Project Overview
 
-## Planned Architecture
+This project will build a clear, testable RISC-V CPU core from the ground up.
+The first implementation target is intentionally small: a 32-bit single-cycle
+RV32I processor with a documented instruction subset, simple memory model, and
+focused verification plan.
 
-The first implementation target is a single-cycle RV32I CPU. This version will
-focus on correctness, readability, and a clear datapath/control structure.
+The project is organized in phases so the architecture, instruction behavior,
+control signals, test strategy, and implementation can be developed in a
+controlled way.
 
-After the single-cycle core is working and tested, the project will evolve into
-a classic 5-stage pipeline:
+## Initial CPU Target
+
+The initial hardware target is a 32-bit single-cycle RV32I CPU core.
+
+Key scope decisions:
+
+- 32-bit data path and instruction width
+- 32 general-purpose registers, each 32 bits wide
+- Register `x0` hardwired to zero
+- Separate instruction memory and data memory for simpler first integration
+- Little-endian memory assumption
+- Word load and word store support only in the first version
+- No interrupts, exceptions, CSR support, privilege modes, compressed
+  instructions, caches, or virtual memory in the first version
+
+The single-cycle design will prioritize correctness and readability before
+performance.
+
+## Future CPU Target
+
+After the single-cycle CPU is implemented and tested, the project will evolve
+into a classic 5-stage pipelined RV32I core:
 
 1. Instruction Fetch
 2. Instruction Decode
@@ -28,65 +44,85 @@ a classic 5-stage pipeline:
 4. Memory
 5. Write Back
 
-Pipeline hazards, forwarding, stalls, branches, and memory behavior will be
-added in later phases.
+Pipeline hazards, forwarding, stalls, control-flow handling, and performance
+improvements will be added in later phases.
 
-## Planned Phases
+## Supported Instruction Subset
 
-- Phase 0: Project setup, repository structure, and starter documentation.
-- Phase 1: ISA notes, architecture planning, and test strategy.
-- Phase 2: Single-cycle RV32I datapath and control implementation.
-- Phase 3: Testbench development and directed instruction tests.
-- Phase 4: Program-level simulation tests.
-- Phase 5: 5-stage pipeline implementation.
-- Phase 6: Hazard handling, forwarding, and branch support.
-- Phase 7: Cleanup, documentation polish, and optional FPGA preparation.
+The initial CPU will support a practical subset of RV32I:
+
+- R-type ALU: `add`, `sub`, `and`, `or`, `xor`, `sll`, `srl`, `sra`, `slt`,
+  `sltu`
+- I-type ALU: `addi`, `andi`, `ori`, `xori`, `slli`, `srli`, `srai`, `slti`,
+  `sltiu`
+- Load/store: `lw`, `sw`
+- Branch: `beq`, `bne`, `blt`, `bge`
+- Jump: `jal`, `jalr`
+- Upper immediate: `lui`, `auipc`
+
+See [docs/instruction_set.md](docs/instruction_set.md) for instruction formats,
+encodings, and behavior notes.
+
+## Project Phases
+
+- Phase 0 - Project setup: complete
+- Phase 1 - ISA definition and CPU scope: current
+- Phase 2 - Core datapath modules
+- Phase 3 - Single-cycle CPU integration
+- Phase 4 - Simulation and testbench system
+- Phase 5 - Instruction test programs
+- Phase 6 - Documentation and diagrams
+- Phase 7 - 5-stage pipeline upgrade
+- Phase 8 - Hazard detection and forwarding
+- Phase 9 - Control flow improvements
+- Phase 10 - Final polish and portfolio release
+
+See [docs/development_plan.md](docs/development_plan.md) for the full plan.
 
 ## Toolchain
 
-The project is intended to work with common open-source and industry hardware
-development tools, including:
+The project is intended to use common hardware design tools:
 
+- SystemVerilog for RTL implementation
 - Icarus Verilog or Verilator for simulation
-- GTKWave for waveform viewing
-- GNU Make for repeatable commands
-- A RISC-V GNU toolchain for assembling or compiling test programs
-- Optional commercial simulators if available
+- GTKWave for waveform inspection
+- GNU Make for repeatable build and simulation commands
+- RISC-V GNU toolchain for assembling test programs in later phases
 
-Exact tool versions and setup instructions will be documented as the project
-develops.
+Exact simulator commands and tool versions will be documented as the
+implementation and test flow are added.
 
 ## Repository Structure
 
 ```text
 RISC-V-CPU-Core/
-├── rtl/              # RTL SystemVerilog design modules
-├── tb/               # Testbenches
-├── sim/              # Simulation outputs and simulator configuration
-├── docs/             # Architecture, ISA, and testing documentation
+├── docs/             # Architecture, ISA, control, testing, and planning docs
+├── rtl/              # Future SystemVerilog RTL modules
+├── tb/               # Future testbenches
+├── sim/              # Future simulation outputs and simulator configuration
 ├── tests/
-│   └── programs/     # RISC-V machine-code test programs
-├── scripts/          # Helper scripts
-├── README.md
+│   └── programs/     # Future RISC-V assembly or machine-code tests
+├── scripts/          # Future helper scripts
+├── Makefile
 ├── LICENSE
-├── .gitignore
-└── Makefile
+└── README.md
 ```
 
-## Current Status
+## How to Run Tests
 
-Phase 0 - Project Setup
+Automated CPU tests are not implemented yet. Testbenches and instruction-level
+program tests will be added in later phases after the datapath modules exist.
 
-The repository structure, starter documentation, simulation folders, and basic
-project files are being created. No CPU implementation files have been added
-yet.
+For now, the repository contains planning documentation only for the CPU scope
+and initial ISA subset.
 
 ## Future Improvements
 
-- Add detailed RV32I instruction documentation.
-- Define the single-cycle CPU block diagram and module boundaries.
-- Add assembler or binary loading flow for test programs.
-- Add automated simulation targets.
-- Add directed and program-level tests.
-- Add waveform generation and debugging documentation.
-- Extend the design into a 5-stage pipelined CPU.
+- Implement the single-cycle datapath and control unit
+- Add focused module-level testbenches
+- Add instruction-level and small-program simulation tests
+- Add waveform-based debugging examples
+- Add architecture diagrams for the datapath and control flow
+- Add a 5-stage pipeline version of the CPU
+- Add hazard detection, forwarding, stalls, and improved branch handling
+- Prepare final documentation suitable for portfolio review
