@@ -1,0 +1,41 @@
+# Simulation waveforms
+*.vcd
+*.fst
+*.ghw
+*.wdb
+
+# Simulator and tool logs
+*.jou
+*.log
+*.pb
+transcript
+xsim.dir/
+work/
+
+# Build outputs
+*.o
+*.out
+*.elf
+*.bin
+*.hex
+*.mem
+build/
+sim/build/
+obj_dir/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Editor files
+.vscode/
+.idea/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# macOS files
+.DS_Store
