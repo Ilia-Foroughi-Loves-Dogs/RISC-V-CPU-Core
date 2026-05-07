@@ -1,132 +1,180 @@
 # Architecture
 
-This document defines the initial CPU architecture scope for the project. The
-first implementation will be a simple single-cycle RV32I core. A 5-stage
-pipelined version is planned after the single-cycle core is implemented,
-simulated, and tested.
+## Overview
 
-## Initial CPU Scope
+The current RISC-V CPU Core is a 32-bit single-cycle processor implementing a
+focused subset of RV32I. The design uses separate instruction and data memories,
+a 32-register integer register file, an immediate generator, main control
+decode, ALU control decode, an ALU, data memory, writeback selection, and
+next-PC logic.
 
-| Feature | Initial Decision |
-| --- | --- |
-| ISA base | RV32I subset |
-| CPU word size | 32-bit |
-| Instruction width | 32-bit |
-| Register count | 32 general-purpose registers |
-| Register width | 32 bits |
-| `x0` behavior | Hardwired to zero |
-| Initial design | Single-cycle CPU |
-| Later design | 5-stage pipelined CPU |
-| Instruction memory | Separate instruction memory |
-| Data memory | Separate data memory |
-| Memory byte order | Little-endian |
-| Initial memory operations | Word load and word store only |
+Simple block view:
 
-The first version will not include interrupts, exceptions, CSRs, privilege
-modes, or compressed instructions. Keeping these features out of scope makes the
-initial datapath and control logic easier to understand and verify.
+```text
+PC -> Instruction Memory -> Decode -> Register File -> ALU -> Data Memory -> Writeback
+```
 
-## Register File
+## CPU Design Goals
 
-The CPU will include 32 architectural registers named `x0` through `x31`.
-Each register is 32 bits wide.
+- Keep the first CPU implementation readable and easy to debug.
+- Implement a practical RV32I subset before adding pipeline complexity.
+- Use clear module boundaries for datapath, control, memory, and testbenches.
+- Support directed instruction-level programs for the implemented instruction
+  groups.
+- Document the architecture honestly, including current limitations.
 
-Register `x0` is special:
+## Single-Cycle Architecture
 
-- Reads from `x0` always return `32'h00000000`.
-- Writes to `x0` have no visible effect.
+The CPU completes each instruction in one architectural cycle. During that
+cycle, the core fetches an instruction, decodes it, reads source operands,
+generates immediates, computes an ALU result or memory address, optionally
+accesses data memory, selects writeback data, and computes the next PC.
 
-The initial register file is expected to support two read ports and one write
-port so R-type, branch, store, and ALU-immediate instructions can be executed in
-a single cycle.
+State updates occur on the clock edge:
 
-## Memory Model
+- The program counter loads `next_pc`.
+- The register file writes `rd` when `reg_write` is asserted and `rd != x0`.
+- Data memory stores a word when `mem_write` is asserted.
 
-The initial CPU will use separate instruction memory and data memory. This is a
-simple Harvard-style organization that avoids structural conflicts in the
-single-cycle design.
+## Major Datapath Blocks
 
-Initial memory assumptions:
+| Block | RTL module | Purpose |
+| --- | --- | --- |
+| Program counter | `program_counter` | Holds the current instruction address and updates to `next_pc`. |
+| Instruction memory | `instruction_memory` | Loads a `.mem` file and returns the instruction at `pc[31:2]`. |
+| Register file | `register_file` | Provides two asynchronous read ports and one synchronous write port. |
+| Immediate generator | `immediate_generator` | Builds sign-extended I, S, B, U, and J immediates. |
+| Control unit | `control_unit` | Decodes opcode-level control signals. |
+| ALU control | `alu_control` | Converts `alu_op`, `funct3`, and `funct7` into an ALU operation. |
+| ALU | `alu` | Performs arithmetic, logical, shift, compare, and address operations. |
+| Data memory | `data_memory` | Provides word load/store memory for simulation. |
+| Core integration | `riscv_core` | Connects blocks and implements branch, jump, writeback, and debug outputs. |
 
-- Instruction memory returns one 32-bit instruction for the current PC.
-- Data memory supports `lw` and `sw` only.
-- Word accesses are 32 bits wide.
-- Memory is little-endian.
-- Byte, halfword, unaligned access behavior, and memory-mapped I/O are out of
-  scope for the first version.
+## Detailed Datapath Diagram
 
-## Initial Single-Cycle Datapath
+```text
+                         +----------------------+
+                         |      next_pc mux     |
+                         | PC+4 / branch / jump |
+                         +----------+-----------+
+                                    |
+                                    v
++---------+      address      +-------------+      instruction      +--------+
+|   PC    +------------------>| Instr Mem   +---------------------->| Decode |
++----+----+                   +-------------+                       +---+----+
+     |                                                                 |
+     | pc                                                              |
+     |                                                                 v
+     |                   +----------------+       +-------------------------+
+     |                   | Control Unit   |------>| control signals         |
+     |                   +----------------+       +-------------------------+
+     |                                                                 |
+     |               rs1/rs2/rd                                        |
+     |                     v                                           v
+     |              +---------------+        read_data1        +---------------+
+     |              | Register File +------------------------->| ALU op A mux  |
+     |              +-------+-------+                          +-------+-------+
+     |                      | read_data2                                |
+     |                      |                                           v
+     |                      |      +--------------------+        +-------------+
+     |                      +----->| ALU op B mux       +------->|     ALU     |
+     |                             | rs2 or immediate   |        +------+------+ 
+     |                             +---------+----------+               |
+     |                                       ^                          |
+     |                                       | imm_out                  v
+     |                             +---------+----------+        +-------------+
+     |                             | Immediate Gen      |        | Data Memory |
+     |                             +--------------------+        +------+------+ 
+     |                                                                 |
+     |                                  +------------------------------+
+     |                                  v
+     |                         +----------------+
+     +------------------------>| Writeback mux  |
+                               | ALU/mem/PC+4/ |
+                               | LUI immediate |
+                               +-------+--------+
+                                       |
+                                       v
+                                 register rd
+```
 
-The planned single-cycle CPU will complete each instruction in one clock cycle.
-The major blocks are:
+## Instruction Fetch
 
-| Block | Purpose |
-| --- | --- |
-| Program counter | Holds the address of the current instruction |
-| Instruction memory | Provides the 32-bit instruction at the current PC |
-| Register file | Reads source operands and writes destination results |
-| Immediate generator | Extracts and sign-extends instruction immediates |
-| Control unit | Decodes opcode-level instruction behavior |
-| ALU control | Converts decode information into a specific ALU operation |
-| ALU | Performs arithmetic, logical, shift, compare, and address operations |
-| Data memory | Handles word loads and word stores |
-| Writeback mux | Selects ALU result, memory data, `PC + 4`, or upper-immediate result |
-| Next-PC logic | Selects `PC + 4`, branch target, `jal` target, or `jalr` target |
+The program counter provides the current byte address. Instruction memory uses
+`address[31:2]` as a word index, so instruction addresses are treated as
+word-aligned. The instruction memory initializes unused locations to a NOP
+encoding, `addi x0, x0, 0`.
 
-At a high level, the PC fetches an instruction, the control logic decodes it,
-the register file and immediate generator provide operands, the ALU computes a
-result or address, memory is accessed when needed, and the writeback mux selects
-the value written to the destination register.
+The default program image is:
 
-## Phase 2 Implemented Modules
+```text
+tests/programs/program.mem
+```
 
-The following standalone modules are implemented under `rtl/`:
+The testbench can load another program with the `+PROGRAM=...` plusarg, wrapped
+by Makefile targets.
 
-| Module | Description |
-| --- | --- |
-| `program_counter` | Holds the current 32-bit instruction address and updates to `next_pc` each clock cycle. |
-| `register_file` | Provides 32 general-purpose 32-bit registers with two asynchronous read ports, one synchronous write port, reset clearing, and hardwired `x0`. |
-| `alu` | Performs RV32I arithmetic, logical, shift, and compare operations and produces a zero flag. |
-| `immediate_generator` | Extracts and sign-extends I-type, S-type, B-type, U-type, and J-type immediates. |
-| `control_unit` | Decodes opcode-level instruction classes into datapath control signals. |
-| `alu_control` | Converts `alu_op`, `funct3`, and `funct7` fields into a specific ALU operation. |
-| `instruction_memory` | Provides simple simulation-only instruction storage loaded from `tests/programs/program.mem`. |
-| `data_memory` | Provides simple simulation-only word-addressed data memory with combinational reads and synchronous writes. |
+## Instruction Decode
 
-These modules are now integrated by the Phase 3 single-cycle core.
+The core extracts standard RISC-V fields:
 
-## Phase 3 Single-Cycle Core Integration
+- `opcode = instruction[6:0]`
+- `rd = instruction[11:7]`
+- `funct3 = instruction[14:12]`
+- `rs1 = instruction[19:15]`
+- `rs2 = instruction[24:20]`
+- `funct7 = instruction[31:25]`
 
-The Phase 3 core connects the Phase 2 blocks into one single-cycle datapath.
-Each instruction is fetched, decoded, executed, and committed using the current
-PC value in one architectural cycle.
+The control unit decodes the opcode into register write, ALU source, memory
+access, branch, jump, ALU operation class, and immediate source signals. The
+ALU control block refines the ALU operation using `alu_op`, `funct3`, and
+`funct7`.
 
-High-level datapath flow:
+## Execute Stage
 
-1. The program counter provides the current instruction address.
-2. Instruction memory returns the 32-bit instruction at that PC.
-3. The core decodes `opcode`, `funct3`, `funct7`, `rs1`, `rs2`, and `rd`.
-4. The control unit selects register write, ALU source, memory access, branch,
-   jump, ALU operation class, and immediate format signals.
-5. The register file reads `rs1` and `rs2` while the immediate generator builds
-   the sign-extended immediate.
-6. The ALU executes arithmetic, logical, shift, compare, address, or AUIPC
-   addition work.
-7. Data memory is accessed for `lw` and `sw`.
-8. The writeback mux selects the value written to `rd`.
-9. Next-PC logic chooses the address for the next cycle.
+The ALU is used for:
 
-Writeback selection:
+- R-type arithmetic, logic, shift, and compare operations
+- I-type arithmetic, logic, shift, and compare operations
+- Load/store address calculation
+- `jalr` target calculation support
+- `auipc` result calculation
+
+For most instructions, ALU operand A is `rs1`. For `auipc`, operand A is the
+current PC. ALU operand B is selected between `rs2` and the generated immediate
+using `alu_src`.
+
+## Memory Access
+
+Data memory supports the current memory subset:
+
+- `lw`: combinational word read when `mem_read` is asserted
+- `sw`: synchronous word write on the rising clock edge when `mem_write` is
+  asserted
+
+The data memory indexes words with `address[31:2]`. Byte, halfword, and
+unaligned memory behavior are outside the current implementation.
+
+## Writeback
+
+The core writes a value to `rd` when `reg_write` is asserted. The selected
+writeback value is:
 
 | Instruction class | Writeback value |
 | --- | --- |
-| R-type and I-type ALU | ALU result |
+| R-type ALU | ALU result |
+| I-type ALU | ALU result |
 | `lw` | Data memory read data |
 | `jal`, `jalr` | `PC + 4` |
 | `lui` | U-type immediate |
-| `auipc` | `PC + U-type immediate` |
+| `auipc` | ALU result, computed as `PC + U-type immediate` |
 
-Next-PC logic:
+Writes to `x0` are ignored by the register file.
+
+## Next-PC Logic
+
+The default next PC is `PC + 4`. The core overrides this value for taken
+branches and jumps:
 
 | Flow | Next PC |
 | --- | --- |
@@ -135,37 +183,68 @@ Next-PC logic:
 | `jal` | `PC + J-type immediate` |
 | `jalr` | `(rs1 + I-type immediate) & 32'hffff_fffe` |
 
-Branch and jump handling is intentionally simple in the single-cycle core.
-Branches are resolved directly from the register operands in the same cycle:
-`beq` compares equality, `bne` compares inequality, `blt` uses signed less-than,
-and `bge` uses signed greater-than-or-equal. `jal` uses the J-type immediate
-relative to the current PC, while `jalr` uses `rs1 + immediate` with bit 0
-cleared as required by RV32I.
+## Branch and Jump Handling
 
-## Planned 5-Stage Pipeline
+Branches are resolved in the same cycle using the register operands:
 
-The later pipeline target will split instruction execution into:
+| Instruction | Condition |
+| --- | --- |
+| `beq` | `rs1 == rs2` |
+| `bne` | `rs1 != rs2` |
+| `blt` | signed `rs1 < rs2` |
+| `bge` | signed `rs1 >= rs2` |
+
+`jal` uses a PC-relative J-type immediate. `jalr` uses `rs1 + I-type immediate`
+and clears bit 0 of the target address.
+
+## Memory Model
+
+The current memory model is simulation-oriented:
+
+- Separate instruction and data memories
+- 1024 32-bit words in each memory module
+- Instruction memory initialized from a `.mem` file
+- Data memory initialized to zero
+- Word addressing through `address[31:2]`
+- Word loads and stores only
+
+This is enough for directed instruction programs but does not model caches,
+memory-mapped I/O, byte enables, bus protocols, or real external memory timing.
+
+## Register File Behavior
+
+The register file has 32 architectural registers, `x0` through `x31`.
+
+- Registers are 32 bits wide.
+- Reads are asynchronous.
+- Writes are synchronous on the rising clock edge.
+- Reset clears all registers to zero.
+- `x0` always reads as zero.
+- Writes to `x0` have no visible effect.
+
+## Current Limitations
+
+- Single-cycle implementation only
+- No pipeline registers or pipeline stages
+- No hazard detection, forwarding, stalls, or flushes
+- No branch prediction
+- No interrupts, exceptions, CSRs, or privilege modes
+- No compressed instructions
+- No multiplication, division, atomics, or floating point
+- No byte or halfword load/store instructions
+- No unaligned memory access support
+- Simulation memory model only
+
+## Future Pipelined Architecture
+
+The planned pipeline upgrade will split the design into five classic stages:
 
 1. Instruction Fetch
 2. Instruction Decode
 3. Execute
 4. Memory
-5. Write Back
+5. Writeback
 
-The pipeline version will build on the single-cycle design after the basic
-datapath, control signals, and instruction behavior are already verified.
-
-## Out of Scope for Initial Version
-
-- Multiplication and division
-- Floating point
-- Compressed instructions
-- Interrupts
-- Exceptions
-- Control and status registers
-- Privilege modes
-- Virtual memory
-- Caches
-- Branch prediction
-- Byte and halfword memory operations
-- Atomic instructions
+Later phases will add pipeline registers, hazard detection, forwarding, stalls,
+flushes, and improved control-flow handling. The current single-cycle design is
+the baseline used to validate instruction behavior before that upgrade.

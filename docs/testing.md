@@ -1,190 +1,195 @@
 # Testing
 
-This document defines the testing workflow for the RISC-V CPU Core project.
+This document explains the simulation and verification workflow for the
+single-cycle RISC-V CPU Core.
 
-## Testing Status
+## Required Tools
 
-Phase 2 includes simple directed SystemVerilog testbenches for the standalone
-datapath and control modules. Phase 3 adds a self-checking integrated CPU test
-for the single-cycle core. Phase 4 organizes the simulation outputs, waveforms,
-logs, and Makefile commands. Phase 5 adds directed instruction-level programs
-for the supported RV32I subset.
+- GNU Make
+- Icarus Verilog with SystemVerilog support (`iverilog -g2012`)
+- `vvp`
+- GTKWave for waveform viewing
 
-## Running Tests
+The existing `.mem` files are already checked in. A RISC-V assembler is useful
+for future automation, but it is not required for the current test flow.
 
-Run all current module-level tests with:
+## How to Run All Tests
+
+Run the full regression:
+
+```sh
+make test-all
+```
+
+This runs:
+
+- All module-level tests
+- The integrated core test
+- All directed instruction program tests
+
+## How to Run Module Tests
+
+Run all standalone module tests:
 
 ```sh
 make test-modules
 ```
 
-This runs the Phase 2 testbenches for the program counter, register file, ALU,
-immediate generator, control unit, ALU control decoder, and data memory.
+Individual module targets:
 
-Run the integrated CPU test with:
+| Target | Testbench | Main RTL under test |
+| --- | --- | --- |
+| `make test-pc` | `tb/tb_program_counter.sv` | `rtl/program_counter.sv` |
+| `make test-regfile` | `tb/tb_register_file.sv` | `rtl/register_file.sv` |
+| `make test-alu` | `tb/tb_alu.sv` | `rtl/alu.sv` |
+| `make test-immgen` | `tb/tb_immediate_generator.sv` | `rtl/immediate_generator.sv` |
+| `make test-control` | `tb/tb_control_unit.sv` | `rtl/control_unit.sv` |
+| `make test-alu-control` | `tb/tb_alu_control.sv` | `rtl/alu_control.sv` |
+| `make test-dmem` | `tb/tb_data_memory.sv` | `rtl/data_memory.sv` |
+
+## How to Run the Core Test
+
+Run the integrated single-cycle CPU test:
 
 ```sh
 make test-core
 ```
 
-This compiles the single-cycle CPU and runs `tb/tb_riscv_core.sv`. The testbench
-prints a cycle-by-cycle trace showing the cycle count, PC, instruction, ALU
-result, and writeback data. The same output is saved to
-`sim/logs/riscv_core.log`. It also performs final self-checks using `$error`.
+This compiles the core RTL with `tb/tb_riscv_core.sv`, loads the default program
+image, prints an execution trace, and performs final self-checks.
 
-Run all instruction program tests with:
-
-```sh
-make test-programs
-```
-
-Run one specific instruction program with its dedicated target:
-
-```sh
-make test-alu-program
-```
-
-or pass a program image directly for an execution trace:
+Load a different program image through the core testbench:
 
 ```sh
 make test-core PROGRAM=tests/programs/alu_tests.mem
 ```
 
-Generate a waveform for the integrated CPU test with:
+When `PROGRAM=...` is passed to `make test-core`, the Makefile also passes
+`+CHECK_NONE`, so the testbench runs the trace without applying a mismatched
+built-in final check.
+
+## How to Run Instruction Program Tests
+
+Run all directed instruction programs:
+
+```sh
+make test-programs
+```
+
+Run one program category:
+
+```sh
+make test-alu-program
+make test-immediate-program
+make test-load-store-program
+make test-branch-program
+make test-jump-program
+make test-upper-program
+make test-full-program
+```
+
+Each named target passes a matching `+CHECK_*` flag to the core testbench so the
+final register or memory state is checked for that program.
+
+## How to Generate Waveforms
+
+Generate the integrated core VCD:
 
 ```sh
 make wave-core
 ```
 
-The waveform is written to:
+Expected VCD path:
 
 ```text
 sim/waves/riscv_core.vcd
 ```
 
-The integrated core log is written to:
+Open with GTKWave:
+
+```sh
+gtkwave sim/waves/riscv_core.vcd
+```
+
+See [waveforms.md](waveforms.md) for suggested signals.
+
+## Where Logs Are Stored
+
+The default core test log is written to:
 
 ```text
 sim/logs/riscv_core.log
 ```
 
-Compiled simulation outputs are placed in:
+Instruction program targets write named logs:
+
+```text
+sim/logs/alu_tests.log
+sim/logs/immediate_tests.log
+sim/logs/load_store_tests.log
+sim/logs/branch_tests.log
+sim/logs/jump_tests.log
+sim/logs/upper_tests.log
+sim/logs/full_program_test.log
+```
+
+Compiled simulation binaries are stored in:
 
 ```text
 sim/build/
 ```
 
-Individual test targets are also available:
+## Where VCD Files Are Stored
 
-- `make test-pc`
-- `make test-regfile`
-- `make test-alu`
-- `make test-immgen`
-- `make test-control`
-- `make test-alu-control`
-- `make test-dmem`
-- `make test-core`
-- `make test-alu-program`
-- `make test-immediate-program`
-- `make test-load-store-program`
-- `make test-branch-program`
-- `make test-jump-program`
-- `make test-upper-program`
-- `make test-full-program`
-- `make test-programs`
+Waveforms are stored in:
 
-The Makefile uses Icarus Verilog with SystemVerilog support:
-
-```sh
-iverilog -g2012
+```text
+sim/waves/
 ```
 
-Remove generated simulation files with:
+The integrated core waveform is:
+
+```text
+sim/waves/riscv_core.vcd
+```
+
+## How `.asm` Files Relate to `.mem` Files
+
+Files under `tests/programs/` follow this convention:
+
+- `.asm` files are readable assembly listings with comments.
+- `.mem` files contain one 32-bit hexadecimal instruction word per line.
+- The instruction memory loads `.mem` files directly during simulation.
+- The `.mem` files intentionally avoid comments so `$fscanf` can read them
+  cleanly.
+
+The current repository stores both forms side by side. The `.asm` files explain
+intent, while the `.mem` files are the actual simulation inputs.
+
+## What Each Test Program Checks
+
+| Program | Make target | What it checks |
+| --- | --- | --- |
+| `program.mem` | `make test-core` | Default smoke program: immediate add, register add/sub, store, and load. |
+| `basic_arithmetic.mem` | Load manually with `PROGRAM=...` | Same core arithmetic and memory sequence as the default program. |
+| `alu_tests.mem` | `make test-alu-program` | R-type `add`, `sub`, `and`, `or`, `xor`, `sll`, `srl`, `sra`, `slt`, `sltu`. |
+| `immediate_tests.mem` | `make test-immediate-program` | I-type `addi`, `andi`, `ori`, `xori`, `slli`, `srli`, `srai`, `slti`, `sltiu`. |
+| `load_store_tests.mem` | `make test-load-store-program` | `sw`, `lw`, address calculation, memory write, and load writeback. |
+| `branch_tests.mem` | `make test-branch-program` | Taken branch behavior for `beq`, `bne`, `blt`, and `bge`. |
+| `jump_tests.mem` | `make test-jump-program` | `jal`, `jalr`, link register writeback, skipped instructions, and target selection. |
+| `upper_tests.mem` | `make test-upper-program` | `lui` and `auipc` immediate writeback behavior. |
+| `full_program_test.mem` | `make test-full-program` | Combined arithmetic, immediate, load/store, branch, jump, and upper-immediate behavior. |
+
+Expected final values are also summarized in
+[tests/programs/README.md](../tests/programs/README.md).
+
+## Cleaning Generated Files
+
+Remove generated simulation outputs:
 
 ```sh
 make clean
 ```
 
-This cleans generated files from `sim/build/`, `sim/waves/`, and `sim/logs/`
-but keeps each directory's `.gitkeep` file.
-
-## Test Categories
-
-| Category | Planned Coverage |
-| --- | --- |
-| ALU instruction tests | R-type arithmetic, logical, shift, and compare instructions |
-| Immediate instruction tests | I-type arithmetic, logical, shift, and compare instructions |
-| Immediate generation tests | I-type, S-type, B-type, J-type, and U-type immediate extraction and sign extension |
-| Register file tests | Register reads, register writes, write-enable behavior, and hardwired `x0` behavior |
-| Load/store tests | `lw`, `sw`, address calculation, word alignment assumptions, and memory write enable behavior |
-| Branch tests | Taken and not-taken behavior for `beq`, `bne`, `blt`, and `bge` |
-| Jump tests | `jal`, `jalr`, link register writeback, target generation, and `jalr` bit-0 clearing |
-| Full small program tests | Short instruction sequences that combine ALU, memory, branch, and jump behavior |
-
-## Phase 5 Instruction Program Tests
-
-The integrated CPU testbench loads `tests/programs/program.mem` by default.
-The program can be changed with a plusarg:
-
-```sh
-vvp sim/build/tb_riscv_core.out +PROGRAM=tests/programs/alu_tests.mem
-```
-
-The Makefile wraps this flow with named targets.
-
-The convention is:
-
-- `.asm` files contain readable RISC-V assembly plus comments explaining the
-  program.
-- `.mem` files contain one 32-bit instruction word per line in hexadecimal.
-- `.mem` files do not include comments, so the instruction memory loader can
-  read them directly.
-
-The basic arithmetic program is stored in:
-
-- `tests/programs/basic_arithmetic.asm`
-- `tests/programs/basic_arithmetic.mem`
-
-The program executes:
-
-1. `addi x1, x0, 5`
-2. `addi x2, x0, 7`
-3. `add x3, x1, x2`
-4. `sw x3, 0(x0)`
-5. `lw x4, 0(x0)`
-6. `sub x5, x4, x1`
-
-At a high level, the expected result is that `x3` becomes 12, data memory word
-0 stores 12, `x4` loads 12 back from memory, and `x5` becomes 7. The testbench
-uses `$error` if these final checks fail and prints PC, instruction, ALU result,
-and writeback data while the program runs.
-
-Phase 5 adds these instruction program images:
-
-| Program | How to run | What it checks |
-| --- | --- | --- |
-| `alu_tests.mem` | `make test-alu-program` | `add`, `sub`, `and`, `or`, `xor`, `sll`, `srl`, `sra`, `slt`, `sltu` |
-| `immediate_tests.mem` | `make test-immediate-program` | `addi`, `andi`, `ori`, `xori`, `slli`, `srli`, `srai`, `slti`, `sltiu` |
-| `load_store_tests.mem` | `make test-load-store-program` | `sw`, `lw`, data memory writes and readback |
-| `branch_tests.mem` | `make test-branch-program` | taken `beq`, `bne`, `blt`, and `bge` paths |
-| `jump_tests.mem` | `make test-jump-program` | `jal`, `jalr`, link registers, and skipped instructions |
-| `upper_tests.mem` | `make test-upper-program` | `lui` and `auipc` writeback behavior |
-| `full_program_test.mem` | `make test-full-program` | arithmetic, immediate, load/store, branch, jump, and upper-immediate behavior together |
-
-The core testbench performs final register or memory checks for each listed
-program where the expected result is simple and deterministic. Expected final
-values are documented in `tests/programs/README.md`.
-
-## Verification Flow
-
-The current verification flow includes:
-
-1. Module-level testbenches for datapath blocks such as the ALU, register file,
-   immediate generator, and control decoder.
-2. Makefile targets to run repeatable simulations with Icarus Verilog.
-3. Small self-checking tests using `$error` for failures.
-4. An integrated single-cycle CPU test that runs a short machine-code program
-   from instruction memory.
-
-Later phases will add waveform inspection examples using GTKWave and broader
-program-level verification as the CPU grows.
+This removes generated files from `sim/build/`, `sim/waves/`, and `sim/logs/`
+while keeping each directory's `.gitkeep` placeholder.

@@ -1,49 +1,21 @@
 # Instruction Set
 
-This document defines the initial RV32I instruction subset for the first
-single-cycle CPU implementation. The goal is to support enough integer
-instructions to run small hand-written programs while keeping the first hardware
-version focused and testable.
-
-All instructions are 32 bits wide. Immediate values are sign-extended unless
-noted otherwise. Register `x0` always reads as zero, and writes to `x0` are
-ignored by the register file.
+This document describes the RV32I subset implemented by the current
+single-cycle CPU. All instructions are 32 bits wide. Register `x0` always reads
+as zero, and writes to `x0` are ignored.
 
 ## Supported Instruction Summary
 
-| Instruction | Type | Opcode | Funct3 | Funct7 | Description |
-| --- | --- | --- | --- | --- | --- |
-| `add` | R | `0110011` | `000` | `0000000` | `rd = rs1 + rs2` |
-| `sub` | R | `0110011` | `000` | `0100000` | `rd = rs1 - rs2` |
-| `and` | R | `0110011` | `111` | `0000000` | `rd = rs1 & rs2` |
-| `or` | R | `0110011` | `110` | `0000000` | `rd = rs1 \| rs2` |
-| `xor` | R | `0110011` | `100` | `0000000` | `rd = rs1 ^ rs2` |
-| `sll` | R | `0110011` | `001` | `0000000` | Logical left shift by `rs2[4:0]` |
-| `srl` | R | `0110011` | `101` | `0000000` | Logical right shift by `rs2[4:0]` |
-| `sra` | R | `0110011` | `101` | `0100000` | Arithmetic right shift by `rs2[4:0]` |
-| `slt` | R | `0110011` | `010` | `0000000` | Set to 1 if signed `rs1 < rs2` |
-| `sltu` | R | `0110011` | `011` | `0000000` | Set to 1 if unsigned `rs1 < rs2` |
-| `addi` | I | `0010011` | `000` | N/A | `rd = rs1 + imm` |
-| `andi` | I | `0010011` | `111` | N/A | `rd = rs1 & imm` |
-| `ori` | I | `0010011` | `110` | N/A | `rd = rs1 \| imm` |
-| `xori` | I | `0010011` | `100` | N/A | `rd = rs1 ^ imm` |
-| `slli` | I | `0010011` | `001` | `0000000` | Logical left shift by `shamt` |
-| `srli` | I | `0010011` | `101` | `0000000` | Logical right shift by `shamt` |
-| `srai` | I | `0010011` | `101` | `0100000` | Arithmetic right shift by `shamt` |
-| `slti` | I | `0010011` | `010` | N/A | Set to 1 if signed `rs1 < imm` |
-| `sltiu` | I | `0010011` | `011` | N/A | Set to 1 if unsigned `rs1 < imm` |
-| `lw` | I | `0000011` | `010` | N/A | Load 32-bit word from `rs1 + imm` |
-| `sw` | S | `0100011` | `010` | N/A | Store 32-bit word to `rs1 + imm` |
-| `beq` | B | `1100011` | `000` | N/A | Branch if `rs1 == rs2` |
-| `bne` | B | `1100011` | `001` | N/A | Branch if `rs1 != rs2` |
-| `blt` | B | `1100011` | `100` | N/A | Branch if signed `rs1 < rs2` |
-| `bge` | B | `1100011` | `101` | N/A | Branch if signed `rs1 >= rs2` |
-| `jal` | J | `1101111` | N/A | N/A | Jump and link using PC-relative offset |
-| `jalr` | I | `1100111` | `000` | N/A | Jump and link using `rs1 + imm` |
-| `lui` | U | `0110111` | N/A | N/A | Load upper immediate into `rd` |
-| `auipc` | U | `0010111` | N/A | N/A | Add upper immediate to current PC |
+| Group | Instructions |
+| --- | --- |
+| R-type | `add`, `sub`, `and`, `or`, `xor`, `sll`, `srl`, `sra`, `slt`, `sltu` |
+| I-type | `addi`, `andi`, `ori`, `xori`, `slli`, `srli`, `srai`, `slti`, `sltiu` |
+| Memory | `lw`, `sw` |
+| Branch | `beq`, `bne`, `blt`, `bge` |
+| Jump | `jal`, `jalr` |
+| Upper | `lui`, `auipc` |
 
-## R-Type ALU Instructions
+## R-Type Instructions
 
 Format:
 
@@ -54,18 +26,27 @@ Format:
 | `[19:15]` | `rs1` |
 | `[14:12]` | `funct3` |
 | `[11:7]` | `rd` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
 Opcode: `0110011`
 
-Supported instructions: `add`, `sub`, `and`, `or`, `xor`, `sll`, `srl`,
-`sra`, `slt`, `sltu`.
+| Instruction | `funct3` | `funct7` | Behavior |
+| --- | --- | --- | --- |
+| `add` | `000` | `0000000` | `rd = rs1 + rs2` |
+| `sub` | `000` | `0100000` | `rd = rs1 - rs2` |
+| `and` | `111` | `0000000` | `rd = rs1 & rs2` |
+| `or` | `110` | `0000000` | `rd = rs1 \| rs2` |
+| `xor` | `100` | `0000000` | `rd = rs1 ^ rs2` |
+| `sll` | `001` | `0000000` | `rd = rs1 << rs2[4:0]` |
+| `srl` | `101` | `0000000` | `rd = rs1 >> rs2[4:0]`, logical |
+| `sra` | `101` | `0100000` | `rd = signed(rs1) >>> rs2[4:0]` |
+| `slt` | `010` | `0000000` | `rd = 1` if signed `rs1 < rs2`, else `0` |
+| `sltu` | `011` | `0000000` | `rd = 1` if unsigned `rs1 < rs2`, else `0` |
 
-R-type instructions read two source registers and write one destination
-register. Shift instructions use only the lower 5 bits of `rs2` as the shift
-amount because RV32 registers are 32 bits wide.
+Immediate behavior: R-type instructions do not use an immediate. Both operands
+come from the register file.
 
-## I-Type Arithmetic and Logical Instructions
+## I-Type ALU Instructions
 
 Format:
 
@@ -75,20 +56,32 @@ Format:
 | `[19:15]` | `rs1` |
 | `[14:12]` | `funct3` |
 | `[11:7]` | `rd` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
 Opcode: `0010011`
 
-Supported instructions: `addi`, `andi`, `ori`, `xori`, `slli`, `srli`,
-`srai`, `slti`, `sltiu`.
+| Instruction | `funct3` | `funct7` / imm bits | Behavior |
+| --- | --- | --- | --- |
+| `addi` | `000` | N/A | `rd = rs1 + sign_extend(imm[11:0])` |
+| `andi` | `111` | N/A | `rd = rs1 & sign_extend(imm[11:0])` |
+| `ori` | `110` | N/A | `rd = rs1 \| sign_extend(imm[11:0])` |
+| `xori` | `100` | N/A | `rd = rs1 ^ sign_extend(imm[11:0])` |
+| `slli` | `001` | `0000000` | `rd = rs1 << shamt` |
+| `srli` | `101` | `0000000` | `rd = rs1 >> shamt`, logical |
+| `srai` | `101` | `0100000` | `rd = signed(rs1) >>> shamt` |
+| `slti` | `010` | N/A | `rd = 1` if signed `rs1 < imm`, else `0` |
+| `sltiu` | `011` | N/A | `rd = 1` if unsigned `rs1 < imm`, else `0` |
 
-Normal I-type immediates are 12-bit signed values sign-extended to 32 bits
-before entering the ALU. Shift-immediate instructions use `shamt = instr[24:20]`
-and distinguish logical versus arithmetic right shift with `funct7`.
+Immediate behavior: normal I-type immediates are 12-bit signed values extended
+to 32 bits. Shift-immediate instructions use `shamt = instruction[24:20]`.
+For `slli`, `srli`, and `srai`, `instruction[31:25]` distinguishes the shift
+variant.
 
-## Load Instruction
+## Memory Instructions
 
-Format:
+### `lw`
+
+Format: I-type load
 
 | Bits | Field |
 | --- | --- |
@@ -96,19 +89,19 @@ Format:
 | `[19:15]` | `rs1` |
 | `[14:12]` | `funct3` |
 | `[11:7]` | `rd` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
-Opcode: `0000011`
+| Instruction | Opcode | `funct3` | Behavior |
+| --- | --- | --- | --- |
+| `lw` | `0000011` | `010` | `rd = memory[rs1 + sign_extend(imm[11:0])]` |
 
-Supported instruction: `lw`
+Immediate behavior: the 12-bit I-type immediate is sign-extended and added to
+`rs1` to form the byte address. The current memory indexes words using
+`address[31:2]`.
 
-`lw` computes the address as `rs1 + sign_extend(imm[11:0])` and loads one
-32-bit word into `rd`. The initial CPU assumes little-endian memory and supports
-word loads only.
+### `sw`
 
-## Store Instruction
-
-Format:
+Format: S-type store
 
 | Bits | Field |
 | --- | --- |
@@ -117,19 +110,19 @@ Format:
 | `[19:15]` | `rs1` |
 | `[14:12]` | `funct3` |
 | `[11:7]` | `imm[4:0]` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
-Opcode: `0100011`
+| Instruction | Opcode | `funct3` | Behavior |
+| --- | --- | --- | --- |
+| `sw` | `0100011` | `010` | `memory[rs1 + sign_extend(S-imm)] = rs2` |
 
-Supported instruction: `sw`
-
-`sw` computes the address as `rs1 + sign_extend({imm[11:5], imm[4:0]})` and
-stores the 32-bit value from `rs2`. Byte and halfword stores are out of scope
-for the initial version.
+Immediate behavior: the S-type immediate is reconstructed from
+`instruction[31:25]` and `instruction[11:7]`, sign-extended, and added to
+`rs1`.
 
 ## Branch Instructions
 
-Format:
+Format: B-type
 
 | Bits | Field |
 | --- | --- |
@@ -140,23 +133,28 @@ Format:
 | `[14:12]` | `funct3` |
 | `[11:8]` | `imm[4:1]` |
 | `[7]` | `imm[11]` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
 Opcode: `1100011`
 
-Supported instructions: `beq`, `bne`, `blt`, `bge`.
+| Instruction | `funct3` | Behavior |
+| --- | --- | --- |
+| `beq` | `000` | Branch if `rs1 == rs2` |
+| `bne` | `001` | Branch if `rs1 != rs2` |
+| `blt` | `100` | Branch if signed `rs1 < rs2` |
+| `bge` | `101` | Branch if signed `rs1 >= rs2` |
 
-Branch immediates are sign-extended, shifted left by 1 bit, and added to the
-current PC when the branch condition is true. The low bit is always zero because
-branch targets are at least 2-byte aligned in the RISC-V encoding. The initial
-CPU will only implement the listed signed branch comparisons plus equality and
-inequality.
+Immediate behavior: the B-type immediate is sign-extended, includes an implied
+low zero bit, and is added to the current PC when the condition is true.
+
+Current branch subset note: unsigned branches such as `bltu` and `bgeu` are not
+part of the supported instruction program set.
 
 ## Jump Instructions
 
 ### `jal`
 
-Format:
+Format: J-type
 
 | Bits | Field |
 | --- | --- |
@@ -165,17 +163,18 @@ Format:
 | `[20]` | `imm[11]` |
 | `[19:12]` | `imm[19:12]` |
 | `[11:7]` | `rd` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
-Opcode: `1101111`
+| Instruction | Opcode | Behavior |
+| --- | --- | --- |
+| `jal` | `1101111` | `rd = PC + 4`; `PC = PC + sign_extend(J-imm)` |
 
-`jal` writes `PC + 4` to `rd` and updates the PC to
-`PC + sign_extend(j_imm)`. The encoded immediate represents a signed
-PC-relative offset with an implied low zero bit.
+Immediate behavior: the J-type immediate is sign-extended, includes an implied
+low zero bit, and is relative to the current PC.
 
 ### `jalr`
 
-Format:
+Format: I-type jump
 
 | Bits | Field |
 | --- | --- |
@@ -183,31 +182,36 @@ Format:
 | `[19:15]` | `rs1` |
 | `[14:12]` | `funct3` |
 | `[11:7]` | `rd` |
-| `[6:0]` | `opcode` |
+| `[6:0]` | opcode |
 
-Opcode: `1100111`
-Funct3: `000`
+| Instruction | Opcode | `funct3` | Behavior |
+| --- | --- | --- | --- |
+| `jalr` | `1100111` | `000` | `rd = PC + 4`; `PC = (rs1 + sign_extend(imm[11:0])) & ~1` |
 
-`jalr` writes `PC + 4` to `rd` and updates the PC to
-`(rs1 + sign_extend(imm[11:0])) & ~1`. Clearing bit 0 matches the RISC-V target
-address rule for `jalr`.
+Immediate behavior: the 12-bit I-type immediate is sign-extended and added to
+`rs1`. Bit 0 of the target address is cleared.
 
 ## Upper Immediate Instructions
 
-Format:
+Format: U-type
 
 | Bits | Field |
 | --- | --- |
 | `[31:12]` | `imm[31:12]` |
 | `[11:7]` | `rd` |
-| `[6:0]` | `opcode` |
-
-Supported instructions:
+| `[6:0]` | opcode |
 
 | Instruction | Opcode | Behavior |
 | --- | --- | --- |
 | `lui` | `0110111` | `rd = imm[31:12] << 12` |
 | `auipc` | `0010111` | `rd = PC + (imm[31:12] << 12)` |
 
-U-type immediates occupy the upper 20 bits of the instruction and are placed in
-bits `[31:12]` of the result, with bits `[11:0]` set to zero.
+Immediate behavior: the U-type immediate occupies the upper 20 bits of the
+instruction and is placed in bits `[31:12]` of the generated immediate, with
+bits `[11:0]` set to zero.
+
+## Unsupported RV32I Features
+
+The current subset does not include byte or halfword loads/stores, unsigned
+branches, `fence`, `ecall`, `ebreak`, CSR instructions, multiplication,
+division, atomics, floating point, or compressed instructions.
