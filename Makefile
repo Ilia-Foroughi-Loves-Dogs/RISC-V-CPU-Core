@@ -1,4 +1,7 @@
-.PHONY: help clean test test-core wave-core test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules
+.PHONY: help clean test test-all test-core wave-core test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules sim-dirs
+
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -c
 
 CORE_RTL = \
 	rtl/program_counter.sv \
@@ -11,15 +14,23 @@ CORE_RTL = \
 	rtl/data_memory.sv \
 	rtl/riscv_core.sv
 
+SIM_BUILD_DIR = sim/build
+SIM_WAVE_DIR  = sim/waves
+SIM_LOG_DIR   = sim/logs
+CORE_OUT      = $(SIM_BUILD_DIR)/tb_riscv_core.out
+CORE_LOG      = $(SIM_LOG_DIR)/riscv_core.log
+CORE_WAVE     = $(SIM_WAVE_DIR)/riscv_core.vcd
+
 help:
 	@echo "RISC-V CPU Core"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  make help             Show this help message"
-	@echo "  make test             Run project tests"
-	@echo "  make test-core        Run the integrated single-cycle CPU test"
-	@echo "  make wave-core        Run the CPU test and generate sim/riscv_core.vcd"
+	@echo "  make clean            Remove generated simulation files"
 	@echo "  make test-modules     Run all Phase 2 module tests"
+	@echo "  make test-core        Run the integrated single-cycle CPU test"
+	@echo "  make wave-core        Run the CPU test and generate $(CORE_WAVE)"
+	@echo "  make test-all         Run module tests and the integrated CPU test"
 	@echo "  make test-pc          Test the program counter"
 	@echo "  make test-regfile     Test the register file"
 	@echo "  make test-alu         Test the ALU"
@@ -27,54 +38,53 @@ help:
 	@echo "  make test-control     Test the control unit"
 	@echo "  make test-alu-control Test the ALU control decoder"
 	@echo "  make test-dmem        Test the data memory"
-	@echo "  make clean            Remove generated simulation and build outputs"
 
-test: test-modules test-core
+test: test-all
 
-build:
-	@mkdir -p build
+test-all: test-modules test-core
 
-sim:
-	@mkdir -p sim
+sim-dirs:
+	@mkdir -p $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR)
 
-test-core: build sim
-	iverilog -g2012 -o build/tb_riscv_core.out $(CORE_RTL) tb/tb_riscv_core.sv
-	vvp build/tb_riscv_core.out
+test-core: sim-dirs
+	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
+	vvp $(CORE_OUT) | tee $(CORE_LOG)
 
 wave-core: test-core
-	@echo "Waveform written to sim/riscv_core.vcd"
+	@echo "Waveform written to $(CORE_WAVE)"
 
-test-pc: build
-	iverilog -g2012 -o build/tb_program_counter.out rtl/program_counter.sv tb/tb_program_counter.sv
-	vvp build/tb_program_counter.out
+test-pc: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_program_counter.out rtl/program_counter.sv tb/tb_program_counter.sv
+	vvp $(SIM_BUILD_DIR)/tb_program_counter.out
 
-test-regfile: build
-	iverilog -g2012 -o build/tb_register_file.out rtl/register_file.sv tb/tb_register_file.sv
-	vvp build/tb_register_file.out
+test-regfile: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_register_file.out rtl/register_file.sv tb/tb_register_file.sv
+	vvp $(SIM_BUILD_DIR)/tb_register_file.out
 
-test-alu: build
-	iverilog -g2012 -o build/tb_alu.out rtl/alu.sv tb/tb_alu.sv
-	vvp build/tb_alu.out
+test-alu: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_alu.out rtl/alu.sv tb/tb_alu.sv
+	vvp $(SIM_BUILD_DIR)/tb_alu.out
 
-test-immgen: build
-	iverilog -g2012 -o build/tb_immediate_generator.out rtl/immediate_generator.sv tb/tb_immediate_generator.sv
-	vvp build/tb_immediate_generator.out
+test-immgen: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_immediate_generator.out rtl/immediate_generator.sv tb/tb_immediate_generator.sv
+	vvp $(SIM_BUILD_DIR)/tb_immediate_generator.out
 
-test-control: build
-	iverilog -g2012 -o build/tb_control_unit.out rtl/control_unit.sv tb/tb_control_unit.sv
-	vvp build/tb_control_unit.out
+test-control: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_control_unit.out rtl/control_unit.sv tb/tb_control_unit.sv
+	vvp $(SIM_BUILD_DIR)/tb_control_unit.out
 
-test-alu-control: build
-	iverilog -g2012 -o build/tb_alu_control.out rtl/alu_control.sv tb/tb_alu_control.sv
-	vvp build/tb_alu_control.out
+test-alu-control: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_alu_control.out rtl/alu_control.sv tb/tb_alu_control.sv
+	vvp $(SIM_BUILD_DIR)/tb_alu_control.out
 
-test-dmem: build
-	iverilog -g2012 -o build/tb_data_memory.out rtl/data_memory.sv tb/tb_data_memory.sv
-	vvp build/tb_data_memory.out
+test-dmem: sim-dirs
+	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_data_memory.out rtl/data_memory.sv tb/tb_data_memory.sv
+	vvp $(SIM_BUILD_DIR)/tb_data_memory.out
 
 test-modules: test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem
 
 clean:
 	@echo "Cleaning generated files..."
-	@rm -rf build sim/build obj_dir xsim.dir work
+	@find $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR) -type f ! -name .gitkeep -delete
+	@rm -rf build obj_dir xsim.dir work
 	@rm -f sim/riscv_core.vcd *.vcd *.fst *.ghw *.wdb *.jou *.log *.pb *.o *.out

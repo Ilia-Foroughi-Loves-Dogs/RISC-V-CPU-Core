@@ -2,7 +2,7 @@
 
 A portfolio-level RISC-V CPU core project written in SystemVerilog.
 
-Current status: Phase 3 - Single-Cycle CPU Integration
+Current status: Phase 4 - Simulation and Testbench System
 
 ## Project Overview
 
@@ -68,8 +68,8 @@ encodings, and behavior notes.
 - Phase 0 - Project setup: complete
 - Phase 1 - ISA definition and CPU scope: complete
 - Phase 2 - Core datapath modules: complete
-- Phase 3 - Single-cycle CPU integration: current
-- Phase 4 - Simulation and testbench system
+- Phase 3 - Single-cycle CPU integration: complete
+- Phase 4 - Simulation and testbench system: current
 - Phase 5 - Instruction test programs
 - Phase 6 - Documentation and diagrams
 - Phase 7 - 5-stage pipeline upgrade
@@ -99,7 +99,7 @@ RISC-V-CPU-Core/
 ├── docs/             # Architecture, ISA, control, testing, and planning docs
 ├── rtl/              # Future SystemVerilog RTL modules
 ├── tb/               # Future testbenches
-├── sim/              # Future simulation outputs and simulator configuration
+├── sim/              # Simulation build outputs, waveforms, and logs
 ├── tests/
 │   └── programs/     # Future RISC-V assembly or machine-code tests
 ├── scripts/          # Future helper scripts
@@ -130,24 +130,38 @@ a small program from instruction memory, perform register and ALU operations,
 use word load/store through data memory, and update the PC for normal,
 branch, and jump flows in the supported RV32I subset.
 
-## How to Run Tests
+## Running Simulations
 
-Run all current module-level tests with:
+Run all Phase 2 module-level tests:
 
 ```sh
 make test-modules
 ```
 
-Run the integrated single-cycle CPU test with:
+Run the integrated single-cycle CPU test:
 
 ```sh
 make test-core
 ```
 
-Generate the CPU waveform at `sim/riscv_core.vcd` with:
+Run the integrated CPU test and generate the waveform at
+`sim/waves/riscv_core.vcd`:
 
 ```sh
 make wave-core
+```
+
+Run all module tests and the integrated CPU test:
+
+```sh
+make test-all
+```
+
+Remove generated files from `sim/build/`, `sim/waves/`, and `sim/logs/` while
+keeping the repository placeholder files:
+
+```sh
+make clean
 ```
 
 ## Future Improvements

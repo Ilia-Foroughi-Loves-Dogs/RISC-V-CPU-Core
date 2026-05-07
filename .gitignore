@@ -1,10 +1,16 @@
-# Simulation waveforms
+# Simulation outputs
+sim/build/*
+sim/waves/*
+sim/logs/*
+!sim/build/.gitkeep
+!sim/waves/.gitkeep
+!sim/logs/.gitkeep
 *.vcd
 *.fst
-*.ghw
-*.wdb
 
 # Simulator and tool logs
+*.ghw
+*.wdb
 *.jou
 *.log
 *.pb
@@ -20,8 +26,7 @@ work/
 *.hex
 *.mem
 !tests/programs/*.mem
-build/
-sim/build/
+/build/
 obj_dir/
 
 # Temporary files
