@@ -78,6 +78,24 @@ the register file and immediate generator provide operands, the ALU computes a
 result or address, memory is accessed when needed, and the writeback mux selects
 the value written to the destination register.
 
+## Phase 2 Implemented Modules
+
+The following standalone modules are implemented under `rtl/`:
+
+| Module | Description |
+| --- | --- |
+| `program_counter` | Holds the current 32-bit instruction address and updates to `next_pc` each clock cycle. |
+| `register_file` | Provides 32 general-purpose 32-bit registers with two asynchronous read ports, one synchronous write port, reset clearing, and hardwired `x0`. |
+| `alu` | Performs RV32I arithmetic, logical, shift, and compare operations and produces a zero flag. |
+| `immediate_generator` | Extracts and sign-extends I-type, S-type, B-type, U-type, and J-type immediates. |
+| `control_unit` | Decodes opcode-level instruction classes into datapath control signals. |
+| `alu_control` | Converts `alu_op`, `funct3`, and `funct7` fields into a specific ALU operation. |
+| `instruction_memory` | Provides simple simulation-only instruction storage loaded from `tests/programs/program.mem`. |
+| `data_memory` | Provides simple simulation-only word-addressed data memory with combinational reads and synchronous writes. |
+
+These modules are intentionally not integrated into a full CPU yet. Full
+single-cycle core assembly is planned for the next implementation phase.
+
 ## Planned 5-Stage Pipeline
 
 The later pipeline target will split instruction execution into:

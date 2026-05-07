@@ -2,7 +2,7 @@
 
 A portfolio-level RISC-V CPU core project written in SystemVerilog.
 
-Current status: Phase 1 - ISA Definition and CPU Scope
+Current status: Phase 2 - Core Datapath Modules
 
 ## Project Overview
 
@@ -66,8 +66,8 @@ encodings, and behavior notes.
 ## Project Phases
 
 - Phase 0 - Project setup: complete
-- Phase 1 - ISA definition and CPU scope: current
-- Phase 2 - Core datapath modules
+- Phase 1 - ISA definition and CPU scope: complete
+- Phase 2 - Core datapath modules: current
 - Phase 3 - Single-cycle CPU integration
 - Phase 4 - Simulation and testbench system
 - Phase 5 - Instruction test programs
@@ -108,13 +108,31 @@ RISC-V-CPU-Core/
 └── README.md
 ```
 
+## Phase 2 Implemented Modules
+
+Phase 2 adds standalone, reusable SystemVerilog blocks for the first
+single-cycle CPU datapath:
+
+- `program_counter`
+- `register_file`
+- `alu`
+- `immediate_generator`
+- `control_unit`
+- `alu_control`
+- `instruction_memory`
+- `data_memory`
+
 ## How to Run Tests
 
-Automated CPU tests are not implemented yet. Testbenches and instruction-level
-program tests will be added in later phases after the datapath modules exist.
+Run all current module-level tests with:
 
-For now, the repository contains planning documentation only for the CPU scope
-and initial ISA subset.
+```sh
+make test-modules
+```
+
+The current tests are focused on individual Phase 2 modules. Full CPU
+integration tests will be added after the single-cycle core is assembled in a
+later phase.
 
 ## Future Improvements
 

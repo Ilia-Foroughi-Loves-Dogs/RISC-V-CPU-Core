@@ -1,14 +1,37 @@
 # Testing
 
-This document defines the Phase 1 testing plan for the RISC-V CPU Core project.
-Actual SystemVerilog testbenches and executable instruction tests will be added
-in later phases after the datapath modules and integrated CPU exist.
+This document defines the testing plan and current module-level test flow for
+the RISC-V CPU Core project.
 
-## Phase 1 Testing Status
+## Phase 2 Testing Status
 
-No hardware testbenches are implemented yet. During Phase 1, testing work is
-limited to planning the categories of behavior that must be verified once RTL
-implementation begins.
+Phase 2 includes simple directed SystemVerilog testbenches for the standalone
+datapath and control modules. The full CPU is not integrated yet, so current
+tests focus on individual module behavior.
+
+## Running Tests
+
+Run all current module-level tests with:
+
+```sh
+make test-modules
+```
+
+Individual test targets are also available:
+
+- `make test-pc`
+- `make test-regfile`
+- `make test-alu`
+- `make test-immgen`
+- `make test-control`
+- `make test-alu-control`
+- `make test-dmem`
+
+The Makefile uses Icarus Verilog with SystemVerilog support:
+
+```sh
+iverilog -g2012
+```
 
 ## Planned Test Categories
 
@@ -22,21 +45,18 @@ implementation begins.
 | Jump tests | `jal`, `jalr`, link register writeback, target generation, and `jalr` bit-0 clearing |
 | Full small program tests | Short instruction sequences that combine ALU, memory, branch, and jump behavior |
 
-## Planned Verification Flow
+## Verification Flow
 
-The first verification flow will likely include:
+The current verification flow includes:
 
 1. Module-level testbenches for datapath blocks such as the ALU, register file,
    immediate generator, and control decoder.
-2. Directed instruction tests for each supported instruction.
-3. Small hand-written RISC-V programs loaded into instruction memory.
-4. Waveform inspection using GTKWave for debugging.
-5. Makefile targets to run repeatable simulations.
+2. Makefile targets to run repeatable simulations with Icarus Verilog.
+3. Small self-checking tests using `$error` for failures.
 
-## Later Testbench Work
+Later phases will add:
 
-Future phases will add actual testbench code under `tb/`, instruction programs
-under `tests/programs/`, and simulator output handling under `sim/`.
-
-Until those phases begin, this repository intentionally contains documentation
-only for the test strategy.
+- Directed instruction tests for each supported instruction.
+- Small hand-written RISC-V programs loaded into instruction memory.
+- Full single-cycle CPU integration tests.
+- Waveform inspection examples using GTKWave.
