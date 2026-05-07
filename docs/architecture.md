@@ -222,10 +222,43 @@ The register file has 32 architectural registers, `x0` through `x31`.
 - `x0` always reads as zero.
 - Writes to `x0` have no visible effect.
 
+## Phase 7 5-Stage Pipeline Architecture
+
+Phase 7 adds a separate pipelined CPU in `rtl/riscv_pipelined_core.sv`. The
+single-cycle CPU remains in `rtl/riscv_core.sv` and is still tested.
+
+The pipelined core splits instruction execution into five stages:
+
+| Stage | Purpose |
+| --- | --- |
+| IF | Fetch the instruction at the current PC and compute `PC + 4`. |
+| ID | Decode fields, generate control signals and immediates, and read the register file. |
+| EX | Select ALU operands, execute ALU operations, and calculate branch or jump targets. |
+| MEM | Access data memory for `lw` and `sw`. |
+| WB | Select ALU, memory, `PC + 4`, or LUI immediate data and write `rd`. |
+
+Pipeline registers separate the stages:
+
+| Register | RTL module | Stored values |
+| --- | --- | --- |
+| IF/ID | `if_id_reg` | Fetch PC, `PC + 4`, and instruction. |
+| ID/EX | `id_ex_reg` | Decoded operands, immediate, register fields, function fields, opcode, and control. |
+| EX/MEM | `ex_mem_reg` | ALU result, store data, branch target/decision, destination register, and MEM/WB control. |
+| MEM/WB | `mem_wb_reg` | Memory read data, ALU result, immediate, destination register, and WB control. |
+
+In Phase 7, the PC normally advances by 4. Branch and jump target calculation is
+present, but there is no pipeline flush logic yet, so control-flow-heavy
+programs are not the main validation target for this phase.
+
+The major current limitation is that there is no forwarding or hazard detection
+unit. A consumer instruction can read an old register value if it reaches ID
+before the producer reaches WB. Test programs therefore insert
+`32'h00000013` NOP instructions (`addi x0, x0, 0`) between dependent
+instructions.
+
 ## Current Limitations
 
-- Single-cycle implementation only
-- No pipeline registers or pipeline stages
+- Single-cycle and first pipelined implementations are both present
 - No hazard detection, forwarding, stalls, or flushes
 - No branch prediction
 - No interrupts, exceptions, CSRs, or privilege modes
@@ -235,16 +268,6 @@ The register file has 32 architectural registers, `x0` through `x31`.
 - No unaligned memory access support
 - Simulation memory model only
 
-## Future Pipelined Architecture
-
-The planned pipeline upgrade will split the design into five classic stages:
-
-1. Instruction Fetch
-2. Instruction Decode
-3. Execute
-4. Memory
-5. Writeback
-
-Later phases will add pipeline registers, hazard detection, forwarding, stalls,
-flushes, and improved control-flow handling. The current single-cycle design is
-the baseline used to validate instruction behavior before that upgrade.
+Later phases will add hazard detection, forwarding, stalls, flushes, and
+improved control-flow handling. The single-cycle design remains the baseline
+used to validate instruction behavior while the pipeline grows.

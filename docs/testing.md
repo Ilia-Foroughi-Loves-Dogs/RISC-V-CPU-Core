@@ -1,7 +1,7 @@
 # Testing
 
 This document explains the simulation and verification workflow for the
-single-cycle RISC-V CPU Core.
+single-cycle and Phase 7 pipelined RISC-V CPU cores.
 
 ## Required Tools
 
@@ -26,6 +26,7 @@ This runs:
 - All module-level tests
 - The integrated core test
 - All directed instruction program tests
+- The Phase 7 pipelined core test
 
 ## How to Run Module Tests
 
@@ -68,6 +69,37 @@ When `PROGRAM=...` is passed to `make test-core`, the Makefile also passes
 `+CHECK_NONE`, so the testbench runs the trace without applying a mismatched
 built-in final check.
 
+## How to Run the Pipelined Core Test
+
+Run the Phase 7 pipelined CPU test:
+
+```sh
+make test-pipeline
+```
+
+This compiles `rtl/riscv_pipelined_core.sv` with its pipeline registers and
+`tb/tb_riscv_pipelined_core.sv`. The test loads:
+
+```text
+tests/programs/pipeline_basic.mem
+```
+
+The testbench prints a cycle trace with IF PC, ID instruction, EX ALU result,
+MEM ALU result, and WB writeback data. It checks that the program writes the
+expected register and memory values.
+
+`pipeline_basic.asm` tests basic pipelined execution with:
+
+- `addi` into `x1`
+- `addi` into `x2`
+- `add x3, x1, x2`
+- `sw x3, 4(x0)`
+- `lw x4, 4(x0)`
+
+NOPs are inserted because the Phase 7 pipeline does not have forwarding or
+hazard detection. The NOPs give producer instructions enough cycles to reach WB
+before dependent consumers read the register file.
+
 ## How to Run Instruction Program Tests
 
 Run all directed instruction programs:
@@ -103,6 +135,18 @@ Expected VCD path:
 
 ```text
 sim/waves/riscv_core.vcd
+```
+
+Generate the pipelined core VCD:
+
+```sh
+make wave-pipeline
+```
+
+Expected VCD path:
+
+```text
+sim/waves/riscv_pipelined_core.vcd
 ```
 
 Open with GTKWave:
@@ -153,6 +197,12 @@ The integrated core waveform is:
 sim/waves/riscv_core.vcd
 ```
 
+The pipelined core waveform is:
+
+```text
+sim/waves/riscv_pipelined_core.vcd
+```
+
 ## How `.asm` Files Relate to `.mem` Files
 
 Files under `tests/programs/` follow this convention:
@@ -179,6 +229,7 @@ intent, while the `.mem` files are the actual simulation inputs.
 | `jump_tests.mem` | `make test-jump-program` | `jal`, `jalr`, link register writeback, skipped instructions, and target selection. |
 | `upper_tests.mem` | `make test-upper-program` | `lui` and `auipc` immediate writeback behavior. |
 | `full_program_test.mem` | `make test-full-program` | Combined arithmetic, immediate, load/store, branch, jump, and upper-immediate behavior. |
+| `pipeline_basic.mem` | `make test-pipeline` | Basic 5-stage pipeline flow with manual NOPs around data dependencies. |
 
 Expected final values are also summarized in
 [tests/programs/README.md](../tests/programs/README.md).

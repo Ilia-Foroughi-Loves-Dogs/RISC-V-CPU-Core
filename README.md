@@ -4,23 +4,24 @@ A SystemVerilog implementation of a small RV32I CPU core, built as a serious
 portfolio project with readable RTL, directed tests, and implementation-focused
 documentation.
 
-Current status: **Phase 6 - Documentation and Diagrams**
+Current status: **Phase 7 - 5-Stage Pipeline Upgrade**
 
 ## Project Summary
 
-This repository implements a 32-bit single-cycle RISC-V CPU core for a focused
-subset of the RV32I base integer ISA. The current design prioritizes clarity,
-testability, and architectural correctness over performance. It is intended to
-show the full path from ISA scope definition through datapath modules, CPU
-integration, simulation, instruction-level tests, and documentation.
+This repository implements a 32-bit RISC-V CPU project for a focused subset of
+the RV32I base integer ISA. It includes the original single-cycle core and a
+first 5-stage pipelined core. The current design prioritizes clarity,
+testability, and architectural correctness over performance.
 
-The CPU is not pipelined yet. Hazard detection, forwarding, stalls, caches,
-interrupts, exceptions, CSRs, privilege modes, and compressed instructions are
-planned or out of scope for later phases.
+The original single-cycle CPU remains preserved, and a first 5-stage pipelined
+CPU has been added. The Phase 7 pipeline intentionally does not include full
+hazard detection, forwarding, stalls, or flushes yet, so pipeline programs must
+use independent instructions or manual NOPs around dependencies.
 
 ## Current Features
 
 - Single-cycle RV32I CPU core
+- Basic 5-stage pipelined RV32I CPU core
 - 32-bit datapath
 - 32-register register file
 - x0 hardwired to zero
@@ -37,13 +38,39 @@ planned or out of scope for later phases.
 
 - Standalone datapath and control RTL modules under `rtl/`
 - Integrated single-cycle core in `rtl/riscv_core.sv`
+- Basic pipelined core in `rtl/riscv_pipelined_core.sv`
 - Simple top-level wrapper in `rtl/riscv_top.sv`
+- Simple pipelined top-level wrapper in `rtl/riscv_pipelined_top.sv`
 - Module-level SystemVerilog testbenches under `tb/`
 - Self-checking integrated CPU testbench
 - Directed instruction programs under `tests/programs/`
 - Simulation output organization under `sim/build/`, `sim/logs/`, and
   `sim/waves/`
 - VCD waveform generation for the integrated core
+- VCD waveform generation for the pipelined core
+
+## Phase 7 Pipeline Status
+
+A first version of a classic 5-stage pipeline is now available:
+
+```text
+IF -> ID -> EX -> MEM -> WB
+```
+
+The original single-cycle CPU in `rtl/riscv_core.sv` is still the baseline
+core and remains part of the regression. The new pipeline uses dedicated
+pipeline registers between stages and runs simple programs such as
+`tests/programs/pipeline_basic.mem`.
+
+Current Phase 7 limitations:
+
+- No forwarding unit yet
+- No hazard detection unit yet
+- No automatic load-use stalls yet
+- No branch/jump flush logic yet
+- Programs with data dependencies need manual NOPs
+
+Hazard detection and forwarding are planned for Phase 8.
 
 ## Supported RV32I Instruction Subset
 
@@ -77,9 +104,10 @@ RISC-V-CPU-Core/
 
 ## Architecture Overview
 
-The current CPU is a single-cycle Harvard-style RV32I core. Instruction memory
-and data memory are separate simulation memories, which keeps the first
-implementation simple and avoids structural memory conflicts.
+The baseline CPU is a single-cycle Harvard-style RV32I core, and Phase 7 adds a
+separate 5-stage pipelined core. Instruction memory and data memory are separate
+simulation memories, which keeps the implementation simple and avoids structural
+memory conflicts.
 
 High-level flow:
 
@@ -120,6 +148,12 @@ Run the integrated single-cycle CPU test:
 make test-core
 ```
 
+Run the Phase 7 pipelined CPU test:
+
+```sh
+make test-pipeline
+```
+
 Run all instruction program tests:
 
 ```sh
@@ -152,6 +186,12 @@ Run:
 
 ```sh
 make wave-core
+```
+
+Generate the pipelined core waveform:
+
+```sh
+make wave-pipeline
 ```
 
 The core waveform is written to:
@@ -188,8 +228,8 @@ run the existing tests.
 - Phase 3 - Single-cycle CPU integration: complete
 - Phase 4 - Simulation and testbench system: complete
 - Phase 5 - Instruction test programs: complete
-- Phase 6 - Documentation and diagrams: current
-- Phase 7 - 5-stage pipeline upgrade
+- Phase 6 - Documentation and diagrams: complete
+- Phase 7 - 5-stage pipeline upgrade: current
 - Phase 8 - Hazard detection and forwarding
 - Phase 9 - Control flow improvements
 - Phase 10 - Final polish and portfolio release
@@ -198,8 +238,7 @@ See [docs/development_plan.md](docs/development_plan.md) for the phase plan.
 
 ## Future Improvements
 
-- Add a 5-stage pipeline version of the CPU
-- Add pipeline registers, hazard detection, forwarding, stalls, and flushes
+- Add pipeline hazard detection, forwarding, stalls, and flushes
 - Expand branch and jump handling for the pipelined design
 - Add more automated assembly-to-memory-image tooling
 - Add more waveform screenshots and exported diagrams
@@ -210,6 +249,6 @@ See [docs/development_plan.md](docs/development_plan.md) for the phase plan.
 This project demonstrates CPU architecture fundamentals, SystemVerilog RTL
 design, module integration, instruction decoding, datapath control,
 testbench-driven verification, waveform debugging, and technical documentation.
-The current implementation is intentionally modest: it is a working
-single-cycle RV32I subset core with directed tests, not yet a pipelined or
-production-grade processor.
+The current implementation is intentionally modest: it has a working
+single-cycle RV32I subset core, a first basic pipelined core, directed tests,
+and documented limitations for future hazard and control-flow work.

@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core wave-core test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -14,13 +14,33 @@ CORE_RTL = \
 	rtl/data_memory.sv \
 	rtl/riscv_core.sv
 
+PIPELINE_RTL = \
+	rtl/program_counter.sv \
+	rtl/instruction_memory.sv \
+	rtl/register_file.sv \
+	rtl/immediate_generator.sv \
+	rtl/control_unit.sv \
+	rtl/alu_control.sv \
+	rtl/alu.sv \
+	rtl/data_memory.sv \
+	rtl/if_id_reg.sv \
+	rtl/id_ex_reg.sv \
+	rtl/ex_mem_reg.sv \
+	rtl/mem_wb_reg.sv \
+	rtl/riscv_pipelined_core.sv \
+	rtl/riscv_pipelined_top.sv
+
 SIM_BUILD_DIR = sim/build
 SIM_WAVE_DIR  = sim/waves
 SIM_LOG_DIR   = sim/logs
 CORE_OUT      = $(SIM_BUILD_DIR)/tb_riscv_core.out
 CORE_LOG      = $(SIM_LOG_DIR)/riscv_core.log
 CORE_WAVE     = $(SIM_WAVE_DIR)/riscv_core.vcd
+PIPELINE_OUT  = $(SIM_BUILD_DIR)/tb_riscv_pipelined_core.out
+PIPELINE_LOG  = $(SIM_LOG_DIR)/riscv_pipelined_core.log
+PIPELINE_WAVE = $(SIM_WAVE_DIR)/riscv_pipelined_core.vcd
 CORE_PROGRAM_ARG = $(if $(PROGRAM),+PROGRAM=$(PROGRAM) +CHECK_NONE,)
+PIPELINE_PROGRAM_ARG = +PROGRAM=$(if $(PROGRAM),$(PROGRAM),tests/programs/pipeline_basic.mem)
 
 define RUN_CORE_PROGRAM
 	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
@@ -35,9 +55,11 @@ help:
 	@echo "  make clean            Remove generated simulation files"
 	@echo "  make test-modules     Run all Phase 2 module tests"
 	@echo "  make test-core        Run the integrated single-cycle CPU test"
+	@echo "  make test-pipeline    Run the Phase 7 pipelined CPU test"
 	@echo "  make test-programs    Run all Phase 5 instruction program tests"
 	@echo "  make wave-core        Run the CPU test and generate $(CORE_WAVE)"
-	@echo "  make test-all         Run module tests, the core test, and instruction program tests"
+	@echo "  make wave-pipeline    Run the pipelined CPU test and generate $(PIPELINE_WAVE)"
+	@echo "  make test-all         Run module tests, core tests, and instruction program tests"
 	@echo "  make test-pc          Test the program counter"
 	@echo "  make test-regfile     Test the register file"
 	@echo "  make test-alu         Test the ALU"
@@ -48,7 +70,7 @@ help:
 
 test: test-all
 
-test-all: test-modules test-core test-programs
+test-all: test-modules test-core test-programs test-pipeline
 
 sim-dirs:
 	@mkdir -p $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR)
@@ -57,8 +79,15 @@ test-core: sim-dirs
 	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
 	vvp $(CORE_OUT) $(CORE_PROGRAM_ARG) | tee $(CORE_LOG)
 
+test-pipeline: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) $(PIPELINE_PROGRAM_ARG) | tee $(PIPELINE_LOG)
+
 wave-core: test-core
 	@echo "Waveform written to $(CORE_WAVE)"
+
+wave-pipeline: test-pipeline
+	@echo "Waveform written to $(PIPELINE_WAVE)"
 
 test-alu-program: sim-dirs
 	$(call RUN_CORE_PROGRAM,tests/programs/alu_tests.mem,alu_tests,CHECK_ALU)
