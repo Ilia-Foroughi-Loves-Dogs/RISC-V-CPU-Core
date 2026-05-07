@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core wave-core test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules sim-dirs
+.PHONY: help clean test test-all test-core wave-core test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -20,6 +20,12 @@ SIM_LOG_DIR   = sim/logs
 CORE_OUT      = $(SIM_BUILD_DIR)/tb_riscv_core.out
 CORE_LOG      = $(SIM_LOG_DIR)/riscv_core.log
 CORE_WAVE     = $(SIM_WAVE_DIR)/riscv_core.vcd
+CORE_PROGRAM_ARG = $(if $(PROGRAM),+PROGRAM=$(PROGRAM) +CHECK_NONE,)
+
+define RUN_CORE_PROGRAM
+	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
+	vvp $(CORE_OUT) +PROGRAM=$(1) +$(3) | tee $(SIM_LOG_DIR)/$(2).log
+endef
 
 help:
 	@echo "RISC-V CPU Core"
@@ -29,8 +35,9 @@ help:
 	@echo "  make clean            Remove generated simulation files"
 	@echo "  make test-modules     Run all Phase 2 module tests"
 	@echo "  make test-core        Run the integrated single-cycle CPU test"
+	@echo "  make test-programs    Run all Phase 5 instruction program tests"
 	@echo "  make wave-core        Run the CPU test and generate $(CORE_WAVE)"
-	@echo "  make test-all         Run module tests and the integrated CPU test"
+	@echo "  make test-all         Run module tests, the core test, and instruction program tests"
 	@echo "  make test-pc          Test the program counter"
 	@echo "  make test-regfile     Test the register file"
 	@echo "  make test-alu         Test the ALU"
@@ -41,17 +48,40 @@ help:
 
 test: test-all
 
-test-all: test-modules test-core
+test-all: test-modules test-core test-programs
 
 sim-dirs:
 	@mkdir -p $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR)
 
 test-core: sim-dirs
 	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
-	vvp $(CORE_OUT) | tee $(CORE_LOG)
+	vvp $(CORE_OUT) $(CORE_PROGRAM_ARG) | tee $(CORE_LOG)
 
 wave-core: test-core
 	@echo "Waveform written to $(CORE_WAVE)"
+
+test-alu-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/alu_tests.mem,alu_tests,CHECK_ALU)
+
+test-immediate-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/immediate_tests.mem,immediate_tests,CHECK_IMMEDIATE)
+
+test-load-store-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/load_store_tests.mem,load_store_tests,CHECK_LOAD_STORE)
+
+test-branch-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/branch_tests.mem,branch_tests,CHECK_BRANCH)
+
+test-jump-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/jump_tests.mem,jump_tests,CHECK_JUMP)
+
+test-upper-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/upper_tests.mem,upper_tests,CHECK_UPPER)
+
+test-full-program: sim-dirs
+	$(call RUN_CORE_PROGRAM,tests/programs/full_program_test.mem,full_program_test,CHECK_FULL)
+
+test-programs: test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program
 
 test-pc: sim-dirs
 	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_program_counter.out rtl/program_counter.sv tb/tb_program_counter.sv

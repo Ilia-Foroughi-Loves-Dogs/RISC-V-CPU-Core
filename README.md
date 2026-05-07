@@ -2,7 +2,7 @@
 
 A portfolio-level RISC-V CPU core project written in SystemVerilog.
 
-Current status: Phase 4 - Simulation and Testbench System
+Current status: Phase 5 - Instruction Test Programs
 
 ## Project Overview
 
@@ -69,8 +69,8 @@ encodings, and behavior notes.
 - Phase 1 - ISA definition and CPU scope: complete
 - Phase 2 - Core datapath modules: complete
 - Phase 3 - Single-cycle CPU integration: complete
-- Phase 4 - Simulation and testbench system: current
-- Phase 5 - Instruction test programs
+- Phase 4 - Simulation and testbench system: complete
+- Phase 5 - Instruction test programs: current
 - Phase 6 - Documentation and diagrams
 - Phase 7 - 5-stage pipeline upgrade
 - Phase 8 - Hazard detection and forwarding
@@ -131,6 +131,23 @@ a small program from instruction memory, perform register and ALU operations,
 use word load/store through data memory, and update the PC for normal,
 branch, and jump flows in the supported RV32I subset.
 
+## Phase 5 Instruction Programs
+
+Phase 5 adds directed instruction-level programs under `tests/programs/`.
+Assembly files (`.asm`) are readable source listings with comments, while
+memory files (`.mem`) contain 32-bit hexadecimal machine code loaded by the
+testbench.
+
+Instruction test categories:
+
+- R-type ALU instructions
+- I-type immediate instructions
+- Load/store instructions
+- Branch instructions
+- Jump instructions
+- Upper-immediate instructions
+- A combined full-program test
+
 ## Running Simulations
 
 Run all Phase 2 module-level tests:
@@ -145,6 +162,24 @@ Run the integrated single-cycle CPU test:
 make test-core
 ```
 
+Run all Phase 5 instruction program tests:
+
+```sh
+make test-programs
+```
+
+Run one self-checking instruction program:
+
+```sh
+make test-alu-program
+```
+
+Load a specific memory image through the core testbench:
+
+```sh
+make test-core PROGRAM=tests/programs/alu_tests.mem
+```
+
 Run the integrated CPU test and generate the waveform at
 `sim/waves/riscv_core.vcd`:
 
@@ -152,7 +187,8 @@ Run the integrated CPU test and generate the waveform at
 make wave-core
 ```
 
-Run all module tests and the integrated CPU test:
+Run all module tests, the integrated CPU test, and the instruction program
+tests:
 
 ```sh
 make test-all
@@ -167,8 +203,6 @@ make clean
 
 ## Future Improvements
 
-- Add more instruction-level test programs
-- Add instruction-level and small-program simulation tests
 - Add waveform-based debugging examples
 - Add architecture diagrams for the datapath and control flow
 - Add a 5-stage pipeline version of the CPU
