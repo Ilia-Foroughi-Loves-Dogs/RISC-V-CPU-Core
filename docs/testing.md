@@ -1,7 +1,7 @@
 # Testing
 
 This document explains the simulation and verification workflow for the
-single-cycle and Phase 9 pipelined RISC-V CPU cores.
+single-cycle and pipelined RISC-V CPU cores.
 
 ## Required Tools
 
@@ -10,29 +10,39 @@ single-cycle and Phase 9 pipelined RISC-V CPU cores.
 - `vvp`
 - GTKWave for waveform viewing
 
-The existing `.mem` files are already checked in. A RISC-V assembler is useful
-for future automation, but it is not required for the current test flow.
+The existing `.mem` files are checked into the repository. A RISC-V assembler
+is useful for future automation, but it is not required for the current test
+flow.
 
-## How to Run All Tests
+## Major Makefile Targets
 
-Run the full regression:
+| Target | What it runs |
+| --- | --- |
+| `make help` | Prints the available commands. |
+| `make test-all` | Runs the full regression. |
+| `make test-modules` | Runs all standalone module tests. |
+| `make test-core` | Runs the integrated single-cycle CPU test. |
+| `make test-programs` | Runs all directed single-cycle instruction program tests. |
+| `make test-pipeline` | Runs the baseline pipelined CPU test. |
+| `make test-pipeline-hazards` | Runs forwarding, hazard unit, load-use, and branch flush tests. |
+| `make test-pipeline-control-flow` | Runs pipelined branch, `jal`, and `jalr` tests. |
+| `make wave-core` | Runs the single-cycle core test and writes a VCD file. |
+| `make wave-pipeline` | Runs the pipelined core test and writes a VCD file. |
+| `make clean` | Removes generated simulation outputs. |
+
+Run the full regression with:
 
 ```sh
 make test-all
 ```
 
-This runs:
+`test-all` runs module tests, the integrated single-cycle core test, all
+single-cycle instruction program tests, the baseline pipelined core test,
+pipeline hazard tests, and pipeline control-flow tests.
 
-- All module-level tests
-- The integrated core test
-- All directed instruction program tests
-- The pipelined core test
-- The Phase 8 pipeline hazard tests
-- The Phase 9 pipeline control-flow tests
+## Module Tests
 
-## How to Run Module Tests
-
-Run all standalone module tests:
+Run all module tests:
 
 ```sh
 make test-modules
@@ -40,7 +50,7 @@ make test-modules
 
 Individual module targets:
 
-| Target | Testbench | Main RTL under test |
+| Target | Testbench | RTL under test |
 | --- | --- | --- |
 | `make test-pc` | `tb/tb_program_counter.sv` | `rtl/program_counter.sv` |
 | `make test-regfile` | `tb/tb_register_file.sv` | `rtl/register_file.sv` |
@@ -52,18 +62,15 @@ Individual module targets:
 | `make test-forwarding-unit` | `tb/tb_forwarding_unit.sv` | `rtl/forwarding_unit.sv` |
 | `make test-hazard-unit` | `tb/tb_hazard_detection_unit.sv` | `rtl/hazard_detection_unit.sv` |
 
-## How to Run the Core Test
+## Single-Cycle Core Tests
 
-Run the integrated single-cycle CPU test:
+Run the default integrated single-cycle CPU test:
 
 ```sh
 make test-core
 ```
 
-This compiles the core RTL with `tb/tb_riscv_core.sv`, loads the default program
-image, prints an execution trace, and performs final self-checks.
-
-Load a different program image through the core testbench:
+Load a specific memory image through the same testbench:
 
 ```sh
 make test-core PROGRAM=tests/programs/alu_tests.mem
@@ -73,112 +80,9 @@ When `PROGRAM=...` is passed to `make test-core`, the Makefile also passes
 `+CHECK_NONE`, so the testbench runs the trace without applying a mismatched
 built-in final check.
 
-## How to Run the Pipelined Core Test
+## Instruction Program Tests
 
-Run the pipelined CPU test:
-
-```sh
-make test-pipeline
-```
-
-This compiles `rtl/riscv_pipelined_core.sv` with its pipeline registers and
-`tb/tb_riscv_pipelined_core.sv`. The test loads:
-
-```text
-tests/programs/pipeline_basic.mem
-```
-
-The testbench prints a cycle trace with IF PC, ID instruction, EX ALU result,
-MEM ALU result, WB writeback data, stall, flush, and forwarding debug signals.
-It checks that the program writes the expected register and memory values.
-
-`pipeline_basic.asm` tests basic pipelined execution with:
-
-- `addi` into `x1`
-- `addi` into `x2`
-- `add x3, x1, x2`
-- `sw x3, 4(x0)`
-- `lw x4, 4(x0)`
-
-NOPs remain in this legacy program so it continues to exercise the original
-Phase 7-style flow. Phase 8 adds separate programs that remove many manual NOPs.
-
-## How to Run Pipeline Hazard Tests
-
-Run the forwarding unit test:
-
-```sh
-make test-forwarding-unit
-```
-
-Run the hazard detection unit test:
-
-```sh
-make test-hazard-unit
-```
-
-Run all Phase 8 pipeline hazard tests:
-
-```sh
-make test-pipeline-hazards
-```
-
-Run individual pipelined hazard programs:
-
-```sh
-make test-pipeline-forwarding
-make test-pipeline-load-use
-make test-pipeline-branch-flush
-```
-
-The same pipelined testbench can load any checked-in program image with:
-
-```sh
-make test-pipeline PROGRAM=tests/programs/pipeline_forwarding.mem
-```
-
-## How to Run Pipeline Control-Flow Tests
-
-Run all Phase 9 pipeline control-flow tests:
-
-```sh
-make test-pipeline-control-flow
-```
-
-Run individual control-flow programs:
-
-```sh
-make test-pipeline-branch-taken
-make test-pipeline-branch-not-taken
-make test-pipeline-jal
-make test-pipeline-jalr
-```
-
-These targets use the same `tb/tb_riscv_pipelined_core.sv` testbench and
-`+PROGRAM=tests/programs/name.mem` plusarg. The trace prints IF PC, next PC, ID
-instruction, EX/MEM/WB values, stall, flush, branch taken, jump taken, branch
-target, jump target, and forwarding select signals.
-
-Interpretation notes:
-
-- A taken branch or jump should show `fl = 1` while IF/ID and ID/EX are flushed.
-- `br = 1` means the EX-stage branch condition was true.
-- `jp = 1` means an EX-stage `jal` or `jalr` redirected the PC.
-- `pc_next` should match the printed branch or jump target on a redirect.
-- The final self-checks verify the expected register and data memory state.
-
-The Phase 9 programs check:
-
-| Program | What it checks | Expected behavior |
-| --- | --- | --- |
-| `pipeline_branch_taken.mem` | Forwarded `beq` operands, taken branch redirect, wrong-path flush | `x3 = 42`, `memory[20] = 42` |
-| `pipeline_branch_not_taken.mem` | Forwarded `beq` operands with sequential PC | `x3 = 42`, `memory[24] = 42` |
-| `pipeline_jal.mem` | `jal` target selection, link writeback, wrong-path flush | `x1 = 4`, `x3 = 42`, `memory[28] = 42` |
-| `pipeline_jalr.mem` | Forwarded `jalr` base, target bit 0 clear, link writeback, wrong-path flush | `x1 = 8`, `x3 = 42`, `memory[32] = 42` |
-
-## How to Run Instruction Program Tests
-
-Run all directed instruction programs:
+Run all directed single-cycle instruction programs:
 
 ```sh
 make test-programs
@@ -196,54 +100,135 @@ make test-upper-program
 make test-full-program
 ```
 
-Each named target passes a matching `+CHECK_*` flag to the core testbench so the
-final register or memory state is checked for that program.
+Each named target passes a matching `+CHECK_*` flag to the core testbench so
+the final register or memory state is checked for that program.
 
-## How to Generate Waveforms
+## Pipelined Core Tests
 
-Generate the integrated core VCD:
+Run the baseline pipelined CPU test:
 
 ```sh
-make wave-core
+make test-pipeline
 ```
 
-Expected VCD path:
+This loads:
 
 ```text
-sim/waves/riscv_core.vcd
+tests/programs/pipeline_basic.mem
 ```
 
-Generate the pipelined core VCD:
+Run all pipeline hazard tests:
 
 ```sh
-make wave-pipeline
+make test-pipeline-hazards
 ```
 
-Expected VCD path:
+Run individual hazard programs:
+
+```sh
+make test-pipeline-forwarding
+make test-pipeline-load-use
+make test-pipeline-branch-flush
+```
+
+Run all pipeline control-flow tests:
+
+```sh
+make test-pipeline-control-flow
+```
+
+Run individual control-flow programs:
+
+```sh
+make test-pipeline-branch-taken
+make test-pipeline-branch-not-taken
+make test-pipeline-jal
+make test-pipeline-jalr
+```
+
+The pipelined testbench can also load any checked-in program image:
+
+```sh
+make test-pipeline PROGRAM=tests/programs/pipeline_forwarding.mem
+```
+
+## Test Programs
+
+Files under `tests/programs/` include readable `.asm` listings and matching
+simulation-ready `.mem` files.
+
+| Program | Make target | What it checks |
+| --- | --- | --- |
+| `program.mem` | `make test-core` | Default smoke program: immediate add, register add/sub, store, and load. |
+| `basic_arithmetic.mem` | Manual `PROGRAM=...` load | Same core arithmetic and memory sequence as the default program. |
+| `alu_tests.mem` | `make test-alu-program` | R-type ALU instructions. |
+| `immediate_tests.mem` | `make test-immediate-program` | I-type ALU and shift-immediate instructions. |
+| `load_store_tests.mem` | `make test-load-store-program` | `sw`, `lw`, address calculation, memory write, and load writeback. |
+| `branch_tests.mem` | `make test-branch-program` | Taken `beq`, `bne`, `blt`, and `bge`. |
+| `jump_tests.mem` | `make test-jump-program` | `jal`, `jalr`, link writeback, and target selection. |
+| `upper_tests.mem` | `make test-upper-program` | `lui` and `auipc`. |
+| `full_program_test.mem` | `make test-full-program` | Combined instruction behavior. |
+| `pipeline_basic.mem` | `make test-pipeline` | Basic 5-stage pipeline flow with legacy NOP padding. |
+| `pipeline_forwarding.mem` | `make test-pipeline-forwarding` | ALU dependencies and forwarded store data. |
+| `pipeline_load_use.mem` | `make test-pipeline-load-use` | One-cycle load-use stall and MEM/WB forwarding. |
+| `pipeline_branch_flush.mem` | `make test-pipeline-branch-flush` | Taken branch and jump wrong-path flushes. |
+| `pipeline_branch_taken.mem` | `make test-pipeline-branch-taken` | Forwarded branch operands and taken redirect. |
+| `pipeline_branch_not_taken.mem` | `make test-pipeline-branch-not-taken` | Forwarded branch operands with sequential PC. |
+| `pipeline_jal.mem` | `make test-pipeline-jal` | Pipelined `jal`, link writeback, and flush. |
+| `pipeline_jalr.mem` | `make test-pipeline-jalr` | Pipelined `jalr`, forwarded base, link writeback, and flush. |
+
+Expected final values are summarized in
+[../tests/programs/README.md](../tests/programs/README.md).
+
+## How `.asm` and `.mem` Files Relate
+
+- `.asm` files are human-readable assembly listings with comments.
+- `.mem` files contain one 32-bit hexadecimal instruction word per line.
+- Instruction memory loads `.mem` files directly during simulation.
+- `.mem` files intentionally avoid comments so `$fscanf` can read them cleanly.
+
+The repository stores both forms side by side. The `.asm` files explain intent;
+the `.mem` files are the actual simulation inputs.
+
+## Adding a New Test Program
+
+1. Add a readable assembly listing under `tests/programs/name.asm`.
+2. Add the matching machine-code memory image under `tests/programs/name.mem`.
+3. Keep the `.mem` file to one 32-bit hexadecimal instruction per line.
+4. Add final expected checks to the relevant testbench if the program should be
+   self-checking.
+5. Add a Makefile target if the program should become part of the standard
+   workflow.
+6. Document the new program in `tests/programs/README.md` and this file.
+
+## Debugging Failed Tests
+
+Start with the failing Makefile target and read the printed trace. The
+integrated testbenches print the program path, cycle count, PC, instruction,
+ALU result, writeback data, and pipeline debug signals where available.
+
+Useful checks:
+
+- Confirm that the intended `.mem` file is being loaded.
+- Compare the `.mem` file against the matching `.asm` listing.
+- Check whether the failure is in decode, ALU result, memory access, writeback,
+  stall, flush, or forwarding.
+- Generate a waveform with `make wave-core` or `make wave-pipeline`.
+- Inspect the corresponding log under `sim/logs/`.
+
+## Logs and Waveforms
+
+Default logs are written under:
 
 ```text
-sim/waves/riscv_pipelined_core.vcd
+sim/logs/
 ```
 
-Open with GTKWave:
-
-```sh
-gtkwave sim/waves/riscv_core.vcd
-```
-
-See [waveforms.md](waveforms.md) for suggested signals.
-
-## Where Logs Are Stored
-
-The default core test log is written to:
+Common log files include:
 
 ```text
 sim/logs/riscv_core.log
-```
-
-Instruction program targets write named logs:
-
-```text
+sim/logs/riscv_pipelined_core.log
 sim/logs/alu_tests.log
 sim/logs/immediate_tests.log
 sim/logs/load_store_tests.log
@@ -251,71 +236,33 @@ sim/logs/branch_tests.log
 sim/logs/jump_tests.log
 sim/logs/upper_tests.log
 sim/logs/full_program_test.log
+sim/logs/pipeline_forwarding.log
+sim/logs/pipeline_load_use.log
+sim/logs/pipeline_branch_flush.log
 sim/logs/pipeline_branch_taken.log
 sim/logs/pipeline_branch_not_taken.log
 sim/logs/pipeline_jal.log
 sim/logs/pipeline_jalr.log
 ```
 
-Compiled simulation binaries are stored in:
+Compiled simulation binaries are written under:
 
 ```text
 sim/build/
 ```
 
-## Where VCD Files Are Stored
-
-Waveforms are stored in:
+Waveforms are written under:
 
 ```text
 sim/waves/
 ```
 
-The integrated core waveform is:
+Main VCD files:
 
 ```text
 sim/waves/riscv_core.vcd
-```
-
-The pipelined core waveform is:
-
-```text
 sim/waves/riscv_pipelined_core.vcd
 ```
-
-## How `.asm` Files Relate to `.mem` Files
-
-Files under `tests/programs/` follow this convention:
-
-- `.asm` files are readable assembly listings with comments.
-- `.mem` files contain one 32-bit hexadecimal instruction word per line.
-- The instruction memory loads `.mem` files directly during simulation.
-- The `.mem` files intentionally avoid comments so `$fscanf` can read them
-  cleanly.
-
-The current repository stores both forms side by side. The `.asm` files explain
-intent, while the `.mem` files are the actual simulation inputs.
-
-## What Each Test Program Checks
-
-| Program | Make target | What it checks |
-| --- | --- | --- |
-| `program.mem` | `make test-core` | Default smoke program: immediate add, register add/sub, store, and load. |
-| `basic_arithmetic.mem` | Load manually with `PROGRAM=...` | Same core arithmetic and memory sequence as the default program. |
-| `alu_tests.mem` | `make test-alu-program` | R-type `add`, `sub`, `and`, `or`, `xor`, `sll`, `srl`, `sra`, `slt`, `sltu`. |
-| `immediate_tests.mem` | `make test-immediate-program` | I-type `addi`, `andi`, `ori`, `xori`, `slli`, `srli`, `srai`, `slti`, `sltiu`. |
-| `load_store_tests.mem` | `make test-load-store-program` | `sw`, `lw`, address calculation, memory write, and load writeback. |
-| `branch_tests.mem` | `make test-branch-program` | Taken branch behavior for `beq`, `bne`, `blt`, and `bge`. |
-| `jump_tests.mem` | `make test-jump-program` | `jal`, `jalr`, link register writeback, skipped instructions, and target selection. |
-| `upper_tests.mem` | `make test-upper-program` | `lui` and `auipc` immediate writeback behavior. |
-| `full_program_test.mem` | `make test-full-program` | Combined arithmetic, immediate, load/store, branch, jump, and upper-immediate behavior. |
-| `pipeline_basic.mem` | `make test-pipeline` | Basic 5-stage pipeline flow with manual NOPs around data dependencies. |
-| `pipeline_forwarding.mem` | `make test-pipeline-forwarding` | ALU dependencies without manual NOPs and forwarded store data. |
-| `pipeline_load_use.mem` | `make test-pipeline-load-use` | A load-use dependency that requires one automatic stall and MEM/WB forwarding. |
-| `pipeline_branch_flush.mem` | `make test-pipeline-branch-flush` | Taken branch and jump behavior with wrong-path instruction flushes. |
-
-Expected final values are also summarized in
-[tests/programs/README.md](../tests/programs/README.md).
 
 ## Cleaning Generated Files
 

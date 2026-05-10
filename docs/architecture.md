@@ -199,8 +199,9 @@ and clears bit 0 of the target address.
 
 ## Pipeline Hazard Handling
 
-The pipelined core in `rtl/riscv_pipelined_core.sv` includes basic Phase 8
-hazard handling while the single-cycle core remains unchanged.
+The pipelined core in `rtl/riscv_pipelined_core.sv` includes forwarding,
+load-use stall handling, and flush support while the single-cycle core remains
+unchanged.
 
 - The forwarding unit selects EX/MEM or MEM/WB results for ID/EX source
   operands when an instruction depends on a recent register write.
@@ -259,10 +260,11 @@ The register file has 32 architectural registers, `x0` through `x31`.
 - `x0` always reads as zero.
 - Writes to `x0` have no visible effect.
 
-## Phase 7 5-Stage Pipeline Architecture
+## 5-Stage Pipeline Architecture
 
-Phase 7 adds a separate pipelined CPU in `rtl/riscv_pipelined_core.sv`. The
-single-cycle CPU remains in `rtl/riscv_core.sv` and is still tested.
+The repository also includes a separate pipelined CPU in
+`rtl/riscv_pipelined_core.sv`. The single-cycle CPU remains in
+`rtl/riscv_core.sv` and is still tested as the baseline implementation.
 
 The pipelined core splits instruction execution into five stages:
 
@@ -283,28 +285,23 @@ Pipeline registers separate the stages:
 | EX/MEM | `ex_mem_reg` | ALU result, store data, branch target/decision, destination register, and MEM/WB control. |
 | MEM/WB | `mem_wb_reg` | Memory read data, ALU result, immediate, destination register, and WB control. |
 
-In Phase 7, the PC normally advances by 4. Branch and jump target calculation is
-present, but there is no pipeline flush logic yet, so control-flow-heavy
-programs are not the main validation target for this phase.
+The pipelined core includes forwarding, load-use hazard detection, stall
+insertion, and flush handling for taken branches and jumps. Branches, `jal`,
+and `jalr` resolve in EX. The fetch path predicts not taken and redirects the
+PC when EX proves that control flow should change.
 
-The major current limitation is that there is no forwarding or hazard detection
-unit. A consumer instruction can read an old register value if it reaches ID
-before the producer reaches WB. Test programs therefore insert
-`32'h00000013` NOP instructions (`addi x0, x0, 0`) between dependent
-instructions.
+Some legacy pipeline tests still include `32'h00000013` NOP instructions
+(`addi x0, x0, 0`) because they were written before forwarding was added.
+Later pipeline tests intentionally exercise forwarding, stalls, and flushes.
 
 ## Current Limitations
 
-- Single-cycle and first pipelined implementations are both present
-- No hazard detection, forwarding, stalls, or flushes
-- No branch prediction
+- Educational CPU model intended for simulation
+- Limited RV32I subset rather than full compliance
+- Simple separate instruction and data memories
+- Word-only `lw` and `sw`
+- Predict-not-taken pipeline control flow
 - No interrupts, exceptions, CSRs, or privilege modes
 - No compressed instructions
 - No multiplication, division, atomics, or floating point
-- No byte or halfword load/store instructions
-- No unaligned memory access support
-- Simulation memory model only
-
-Later phases will add hazard detection, forwarding, stalls, flushes, and
-improved control-flow handling. The single-cycle design remains the baseline
-used to validate instruction behavior while the pipeline grows.
+- No formal verification yet

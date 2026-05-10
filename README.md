@@ -1,101 +1,59 @@
 # RISC-V CPU Core
 
-A SystemVerilog implementation of a small RV32I CPU core, built as a serious
-portfolio project with readable RTL, directed tests, and implementation-focused
-documentation.
+![Language: SystemVerilog](https://img.shields.io/badge/Language-SystemVerilog-blue)
+![Simulation: Icarus Verilog](https://img.shields.io/badge/Simulation-Icarus%20Verilog-green)
+![Status: Educational / Portfolio Project](https://img.shields.io/badge/Status-Educational%20%2F%20Portfolio%20Project-lightgrey)
 
-Current status: **Phase 9 - Control Flow Improvements**
+A portfolio-level SystemVerilog implementation of a small RV32I-inspired
+32-bit CPU core. The repository includes both a single-cycle core and a
+5-stage pipelined core, directed instruction tests, VCD waveform generation,
+and documentation for the architecture, datapath, pipeline, testing flow, and
+known limitations.
 
-## Project Summary
+Current status: **Phase 10 - Final Polish and Portfolio Release**
 
-This repository implements a 32-bit RISC-V CPU project for a focused subset of
-the RV32I base integer ISA. It includes the original single-cycle core and a
-first 5-stage pipelined core. The current design prioritizes clarity,
-testability, and architectural correctness over performance.
+## Key Features
 
-The original single-cycle CPU remains preserved, and the 5-stage pipelined CPU
-now includes hazard handling plus clearer branch, `jal`, and `jalr` control
-flow behavior.
-
-## Current Features
-
-- Single-cycle RV32I CPU core
-- Basic 5-stage pipelined RV32I CPU core
-- Pipeline forwarding and load-use hazard detection
-- 32-bit datapath
-- 32-register register file
-- x0 hardwired to zero
-- ALU arithmetic and logic operations
+- RV32I-inspired 32-bit CPU core
+- Single-cycle CPU implementation
+- 5-stage pipelined CPU implementation
+- IF, ID, EX, MEM, and WB pipeline stages
+- Register file with `x0` hardwired to zero
+- ALU arithmetic and logical operations
 - Immediate generator
 - Control unit
 - Instruction memory
 - Data memory
-- Branch and jump support, including pipelined `jal` and `jalr`
-- Instruction-level test programs
+- Forwarding unit
+- Hazard detection unit
+- Load-use stall support
+- Branch and jump flush handling
 - Makefile-based simulation workflow
+- Instruction-level test programs
+- VCD waveform generation
 
-## Features Implemented So Far
+## Architecture Overview
 
-- Standalone datapath and control RTL modules under `rtl/`
-- Integrated single-cycle core in `rtl/riscv_core.sv`
-- Basic pipelined core in `rtl/riscv_pipelined_core.sv`
-- Simple top-level wrapper in `rtl/riscv_top.sv`
-- Simple pipelined top-level wrapper in `rtl/riscv_pipelined_top.sv`
-- Module-level SystemVerilog testbenches under `tb/`
-- Self-checking integrated CPU testbench
-- Directed instruction programs under `tests/programs/`
-- Simulation output organization under `sim/build/`, `sim/logs/`, and
-  `sim/waves/`
-- VCD waveform generation for the integrated core
-- VCD waveform generation for the pipelined core
+The project contains two CPU implementations:
 
-## Phase 9 Pipeline Status
+- `rtl/riscv_core.sv`: a single-cycle baseline core.
+- `rtl/riscv_pipelined_core.sv`: a 5-stage pipelined core.
 
-A classic 5-stage pipeline is available:
+The single-cycle core completes one instruction per architectural cycle. The
+pipelined core splits instruction execution into the classic five stages:
 
 ```text
 IF -> ID -> EX -> MEM -> WB
 ```
 
-The original single-cycle CPU in `rtl/riscv_core.sv` is still the baseline
-core and remains part of the regression. The pipeline uses dedicated pipeline
-registers between stages and runs both the original NOP-padded
-`tests/programs/pipeline_basic.mem` program and Phase 8 hazard programs.
+Both cores use separate instruction and data memories for simulation. The
+pipelined core includes forwarding, load-use stall handling, and simple
+predict-not-taken branch/jump handling with flushes when control flow is
+redirected.
 
-Pipeline hazard and control-flow handling includes:
+## Supported Instruction Subset
 
-- `rtl/forwarding_unit.sv` selects EX/MEM or MEM/WB results for EX operands.
-- `rtl/hazard_detection_unit.sv` detects load-use hazards and control hazards.
-- Load-use hazards hold the PC and IF/ID register while inserting an ID/EX
-  bubble.
-- Taken branches and jumps flush younger wrong-path instructions.
-- Store data uses forwarded `rs2` values when needed.
-- Branch comparisons use forwarded operands in EX.
-- `jal` writes `PC + 4`, redirects to the J-type target, and flushes the
-  wrong path.
-- `jalr` writes `PC + 4`, redirects to `(rs1 + imm) & ~1`, and uses forwarded
-  `rs1` when needed.
-
-The current pipeline keeps control flow simple and honest: it predicts not
-taken, fetches sequentially, resolves branches and jumps in EX, and flushes
-IF/ID plus ID/EX when the PC is redirected. There is no branch target buffer or
-advanced branch prediction.
-
-## Phase 9 Control-Flow Tests
-
-New directed programs cover the pipelined branch and jump paths:
-
-- `pipeline_branch_taken.mem`: forwarded `beq` operands, taken redirect, and
-  wrong-path flush; expects `memory[20] = 42`.
-- `pipeline_branch_not_taken.mem`: forwarded `beq` operands with sequential PC;
-  expects `memory[24] = 42`.
-- `pipeline_jal.mem`: `jal` link writeback and wrong-path flush; expects
-  `x1 = 4` and `memory[28] = 42`.
-- `pipeline_jalr.mem`: forwarded `jalr` base register, link writeback, target
-  bit 0 clear behavior, and wrong-path flush; expects `x1 = 8` and
-  `memory[32] = 42`.
-
-## Supported RV32I Instruction Subset
+This is a focused RV32I subset, not a full compliance implementation.
 
 | Group | Instructions |
 | --- | --- |
@@ -106,122 +64,75 @@ New directed programs cover the pipelined branch and jump paths:
 | Jump | `jal`, `jalr` |
 | Upper immediate | `lui`, `auipc` |
 
-See [docs/instruction_set.md](docs/instruction_set.md) for formats, opcodes,
-`funct3`/`funct7` values, behavior, and immediate encoding notes.
+See [docs/instruction_set.md](docs/instruction_set.md) for instruction format
+and encoding notes.
 
 ## Repository Structure
 
 ```text
 RISC-V-CPU-Core/
-├── docs/             # Architecture, datapath, ISA, control, testing, and planning docs
+├── docs/             # Architecture, pipeline, testing, waveform, and release docs
 ├── rtl/              # SystemVerilog RTL modules
 ├── tb/               # SystemVerilog testbenches
-├── sim/              # Generated simulation outputs, logs, and waveforms
-├── tests/
-│   └── programs/     # Assembly listings and .mem instruction images
+├── sim/              # Generated build outputs, logs, and waveforms
+├── tests/programs/   # Assembly listings and .mem instruction images
 ├── scripts/          # Placeholder for future helper scripts
 ├── Makefile          # Repeatable simulation workflow
 ├── LICENSE
 └── README.md
 ```
 
-## Architecture Overview
+## Quick Start
 
-The baseline CPU is a single-cycle Harvard-style RV32I core, and Phase 7 adds a
-separate 5-stage pipelined core. Instruction memory and data memory are separate
-simulation memories, which keeps the implementation simple and avoids structural
-memory conflicts.
-
-High-level flow:
-
-```text
-PC -> Instruction Memory -> Decode -> Register File -> ALU -> Data Memory -> Writeback
-```
-
-In one clock cycle, the core fetches the instruction at the current PC, decodes
-the instruction fields, reads source registers, generates an immediate, selects
-ALU operands, executes the operation or computes an address, optionally accesses
-data memory, selects writeback data, and computes the next PC. Register and data
-memory writes commit on the rising clock edge.
-
-More detail:
-
-- [docs/architecture.md](docs/architecture.md) describes the CPU organization.
-- [docs/datapath.md](docs/datapath.md) describes signal flow through the core.
-- [docs/control_signals.md](docs/control_signals.md) documents main control
-  signals and decode behavior.
-
-## How to Run Tests
-
-Run all module tests, the integrated core test, and all instruction programs:
+Install GNU Make, Icarus Verilog with SystemVerilog support, and `vvp`, then
+run the full regression:
 
 ```sh
 make test-all
 ```
 
-Run only module-level tests:
+Useful commands:
 
 ```sh
 make test-modules
-```
-
-Run the integrated single-cycle CPU test:
-
-```sh
 make test-core
-```
-
-Run the pipelined CPU test:
-
-```sh
-make test-pipeline
-```
-
-Run the Phase 8 hazard tests:
-
-```sh
-make test-forwarding-unit
-make test-hazard-unit
-make test-pipeline-hazards
-make test-all
-```
-
-Run the Phase 9 control-flow tests:
-
-```sh
-make test-pipeline-control-flow
-make test-all
-```
-
-Run all instruction program tests:
-
-```sh
 make test-programs
+make test-pipeline
+make test-pipeline-hazards
+make test-pipeline-control-flow
+make wave-core
+make wave-pipeline
+make clean
 ```
 
-Run a specific instruction program:
+## Running Tests
+
+The main test target is:
 
 ```sh
-make test-alu-program
-make test-immediate-program
-make test-load-store-program
-make test-branch-program
-make test-jump-program
-make test-upper-program
-make test-full-program
+make test-all
 ```
 
-Load a specific memory image through the core testbench:
+It runs module-level tests, the integrated single-cycle core test, directed
+single-cycle instruction programs, the baseline pipelined core test, pipeline
+hazard tests, and pipeline control-flow tests.
 
-```sh
-make test-core PROGRAM=tests/programs/alu_tests.mem
-```
+Individual test groups are available through the Makefile:
 
-See [docs/testing.md](docs/testing.md) for the full testing workflow.
+| Target | Purpose |
+| --- | --- |
+| `make test-modules` | Run standalone RTL module tests. |
+| `make test-core` | Run the integrated single-cycle CPU test. |
+| `make test-programs` | Run directed single-cycle instruction programs. |
+| `make test-pipeline` | Run the baseline pipelined CPU program. |
+| `make test-pipeline-hazards` | Run forwarding, hazard unit, load-use, and flush tests. |
+| `make test-pipeline-control-flow` | Run branch, `jal`, and `jalr` pipeline tests. |
 
-## How to Generate Waveforms
+See [docs/testing.md](docs/testing.md) for the complete testing workflow.
 
-Run:
+## Generating Waveforms
+
+Generate the single-cycle core waveform:
 
 ```sh
 make wave-core
@@ -233,13 +144,14 @@ Generate the pipelined core waveform:
 make wave-pipeline
 ```
 
-The core waveform is written to:
+Waveforms are written to:
 
 ```text
 sim/waves/riscv_core.vcd
+sim/waves/riscv_pipelined_core.vcd
 ```
 
-Open it with GTKWave:
+Open a waveform with GTKWave:
 
 ```sh
 gtkwave sim/waves/riscv_core.vcd
@@ -247,46 +159,75 @@ gtkwave sim/waves/riscv_core.vcd
 
 See [docs/waveforms.md](docs/waveforms.md) for useful signals to inspect.
 
-## Toolchain Requirements
+## Documentation Links
 
-- SystemVerilog-capable simulator flow
-- Icarus Verilog with SystemVerilog support (`iverilog -g2012`)
-- `vvp`
-- GNU Make
-- GTKWave for VCD waveform inspection
+- [Documentation index](docs/README.md)
+- [Architecture overview](docs/architecture.md)
+- [Datapath](docs/datapath.md)
+- [Pipeline](docs/pipeline.md)
+- [Instruction set](docs/instruction_set.md)
+- [Control signals](docs/control_signals.md)
+- [Testing](docs/testing.md)
+- [Waveforms](docs/waveforms.md)
+- [Project summary](docs/project_summary.md)
+- [Known limitations](docs/known_limitations.md)
+- [Future work](docs/future_work.md)
+- [Demo guide](docs/demo.md)
+- [Development plan](docs/development_plan.md)
 
-The current `.mem` files are checked into the repository. A RISC-V GNU
-toolchain is useful for future assembly automation, but it is not required to
-run the existing tests.
+## Example Test Programs
 
-## Development Phases
+Readable `.asm` files and matching simulation-ready `.mem` files live in
+`tests/programs/`.
 
-- Phase 0 - Project setup: complete
-- Phase 1 - ISA definition and CPU scope: complete
-- Phase 2 - Core datapath modules: complete
-- Phase 3 - Single-cycle CPU integration: complete
-- Phase 4 - Simulation and testbench system: complete
-- Phase 5 - Instruction test programs: complete
-- Phase 6 - Documentation and diagrams: complete
-- Phase 7 - 5-stage pipeline upgrade: complete
-- Phase 8 - Hazard detection and forwarding: current
-- Phase 9 - Control flow improvements
-- Phase 10 - Final polish and portfolio release
+Examples include:
 
-See [docs/development_plan.md](docs/development_plan.md) for the phase plan.
+- `alu_tests.asm` / `alu_tests.mem`
+- `immediate_tests.asm` / `immediate_tests.mem`
+- `load_store_tests.asm` / `load_store_tests.mem`
+- `branch_tests.asm` / `branch_tests.mem`
+- `jump_tests.asm` / `jump_tests.mem`
+- `full_program_test.asm` / `full_program_test.mem`
+- `pipeline_forwarding.asm` / `pipeline_forwarding.mem`
+- `pipeline_load_use.asm` / `pipeline_load_use.mem`
+- `pipeline_branch_taken.asm` / `pipeline_branch_taken.mem`
+- `pipeline_jal.asm` / `pipeline_jal.mem`
+- `pipeline_jalr.asm` / `pipeline_jalr.mem`
+
+## Current Limitations
+
+- Educational CPU model intended for simulation and portfolio review.
+- Limited RV32I subset; not a full RISC-V compliance target.
+- Simple separate instruction and data memories.
+- Word-only `lw` and `sw` memory access.
+- No caches, interrupts, exceptions, CSRs, privilege modes, compressed
+  instructions, multiplication, division, floating point, or atomics.
+- No formal verification yet.
+- Pipelined control flow uses simple predict-not-taken behavior.
+
+See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
 
 ## Future Improvements
 
-- Expand branch and jump handling for the pipelined design
-- Add more automated assembly-to-memory-image tooling
-- Add more waveform screenshots and exported diagrams
-- Add broader verification coverage and regression reporting
+Possible future work includes full RV32I compliance testing, an assembler flow,
+Verilator or cocotb support, GitHub Actions CI, formal verification with
+SymbiYosys, better branch prediction, cache experiments, a bus interface,
+FPGA synthesis support, and basic peripherals.
 
-## Portfolio Summary
+See [docs/future_work.md](docs/future_work.md).
 
-This project demonstrates CPU architecture fundamentals, SystemVerilog RTL
-design, module integration, instruction decoding, datapath control,
-testbench-driven verification, waveform debugging, and technical documentation.
-The current implementation is intentionally modest: it has a working
-single-cycle RV32I subset core, a hazard-aware pipelined core, directed tests,
-and documented limitations for future control-flow work.
+## Skills Demonstrated
+
+- Computer architecture and CPU datapath design
+- Single-cycle and pipelined processor implementation
+- RISC-V instruction decode and immediate handling
+- Pipeline registers, forwarding, stalls, and flushes
+- SystemVerilog RTL design
+- Directed simulation testbenches
+- Makefile-based verification workflow
+- VCD waveform debugging
+- Technical documentation for a hardware project
+
+## License
+
+This project is released under the license in [LICENSE](LICENSE).
