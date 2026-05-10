@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -23,6 +23,8 @@ PIPELINE_RTL = \
 	rtl/alu_control.sv \
 	rtl/alu.sv \
 	rtl/data_memory.sv \
+	rtl/forwarding_unit.sv \
+	rtl/hazard_detection_unit.sv \
 	rtl/if_id_reg.sv \
 	rtl/id_ex_reg.sv \
 	rtl/ex_mem_reg.sv \
@@ -55,7 +57,10 @@ help:
 	@echo "  make clean            Remove generated simulation files"
 	@echo "  make test-modules     Run all Phase 2 module tests"
 	@echo "  make test-core        Run the integrated single-cycle CPU test"
-	@echo "  make test-pipeline    Run the Phase 7 pipelined CPU test"
+	@echo "  make test-pipeline    Run the pipelined CPU test"
+	@echo "  make test-forwarding-unit Test the forwarding unit"
+	@echo "  make test-hazard-unit Test the hazard detection unit"
+	@echo "  make test-pipeline-hazards Run all Phase 8 pipeline hazard tests"
 	@echo "  make test-programs    Run all Phase 5 instruction program tests"
 	@echo "  make wave-core        Run the CPU test and generate $(CORE_WAVE)"
 	@echo "  make wave-pipeline    Run the pipelined CPU test and generate $(PIPELINE_WAVE)"
@@ -70,7 +75,7 @@ help:
 
 test: test-all
 
-test-all: test-modules test-core test-programs test-pipeline
+test-all: test-modules test-core test-programs test-pipeline test-pipeline-hazards
 
 sim-dirs:
 	@mkdir -p $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR)
@@ -82,6 +87,28 @@ test-core: sim-dirs
 test-pipeline: sim-dirs
 	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
 	vvp $(PIPELINE_OUT) $(PIPELINE_PROGRAM_ARG) | tee $(PIPELINE_LOG)
+
+test-forwarding-unit: sim-dirs
+	iverilog -g2012 -s tb_forwarding_unit -o $(SIM_BUILD_DIR)/tb_forwarding_unit.out rtl/forwarding_unit.sv tb/tb_forwarding_unit.sv
+	vvp $(SIM_BUILD_DIR)/tb_forwarding_unit.out
+
+test-hazard-unit: sim-dirs
+	iverilog -g2012 -s tb_hazard_detection_unit -o $(SIM_BUILD_DIR)/tb_hazard_detection_unit.out rtl/hazard_detection_unit.sv tb/tb_hazard_detection_unit.sv
+	vvp $(SIM_BUILD_DIR)/tb_hazard_detection_unit.out
+
+test-pipeline-forwarding: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_forwarding.mem | tee $(SIM_LOG_DIR)/pipeline_forwarding.log
+
+test-pipeline-load-use: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_load_use.mem | tee $(SIM_LOG_DIR)/pipeline_load_use.log
+
+test-pipeline-branch-flush: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_branch_flush.mem | tee $(SIM_LOG_DIR)/pipeline_branch_flush.log
+
+test-pipeline-hazards: test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush
 
 wave-core: test-core
 	@echo "Waveform written to $(CORE_WAVE)"
@@ -140,7 +167,7 @@ test-dmem: sim-dirs
 	iverilog -g2012 -o $(SIM_BUILD_DIR)/tb_data_memory.out rtl/data_memory.sv tb/tb_data_memory.sv
 	vvp $(SIM_BUILD_DIR)/tb_data_memory.out
 
-test-modules: test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem
+test-modules: test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-forwarding-unit test-hazard-unit
 
 clean:
 	@echo "Cleaning generated files..."

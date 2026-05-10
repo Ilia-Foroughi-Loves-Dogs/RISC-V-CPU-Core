@@ -5,7 +5,11 @@ module riscv_pipelined_core (
     output logic [31:0] id_instruction_debug,
     output logic [31:0] ex_alu_result_debug,
     output logic [31:0] mem_alu_result_debug,
-    output logic [31:0] wb_writeback_data_debug
+    output logic [31:0] wb_writeback_data_debug,
+    output logic        stall_debug,
+    output logic        flush_debug,
+    output logic [1:0]  forward_a_debug,
+    output logic [1:0]  forward_b_debug
 );
 
     localparam logic [6:0] OPCODE_BRANCH = 7'b1100011;
@@ -17,6 +21,11 @@ module riscv_pipelined_core (
     logic [31:0] if_next_pc;
     logic [31:0] if_pc_plus4;
     logic [31:0] if_instruction;
+    logic        pc_write;
+    logic        if_id_write;
+    logic        control_stall;
+    logic        if_id_flush;
+    logic        id_ex_flush;
 
     logic [31:0] id_pc;
     logic [31:0] id_pc_plus4;
@@ -62,6 +71,10 @@ module riscv_pipelined_core (
     logic        ex_jalr;
     logic [2:0]  ex_alu_op;
     logic [3:0]  ex_alu_control_signal;
+    logic [1:0]  ex_forward_a;
+    logic [1:0]  ex_forward_b;
+    logic [31:0] ex_forwarded_data1;
+    logic [31:0] ex_forwarded_data2;
     logic [31:0] ex_alu_operand_a;
     logic [31:0] ex_alu_operand_b;
     logic [31:0] ex_alu_result;
@@ -83,6 +96,7 @@ module riscv_pipelined_core (
     logic        mem_mem_to_reg;
     logic        mem_jump;
     logic [31:0] mem_memory_read_data;
+    logic [31:0] mem_forward_data;
 
     logic [31:0] wb_pc_plus4;
     logic [31:0] wb_alu_result;
@@ -117,10 +131,26 @@ module riscv_pipelined_core (
     always_comb begin
         if_next_pc = if_pc_plus4;
 
-        if (ex_branch_taken || ex_jump) begin
+        if (!pc_write) begin
+            if_next_pc = if_pc;
+        end else if (ex_branch_taken || ex_jump) begin
             if_next_pc = ex_branch_target;
         end
     end
+
+    hazard_detection_unit u_hazard_detection_unit (
+        .if_id_rs1(id_rs1),
+        .if_id_rs2(id_rs2),
+        .id_ex_rd(ex_rd),
+        .id_ex_mem_read(ex_mem_read),
+        .branch_taken(ex_branch_taken),
+        .jump_taken(ex_jump),
+        .pc_write(pc_write),
+        .if_id_write(if_id_write),
+        .control_stall(control_stall),
+        .if_id_flush(if_id_flush),
+        .id_ex_flush(id_ex_flush)
+    );
 
     // ---------------------------------------------------------------------
     // IF/ID pipeline register.
@@ -128,6 +158,8 @@ module riscv_pipelined_core (
     if_id_reg u_if_id_reg (
         .clk(clk),
         .reset(reset),
+        .write_enable(if_id_write),
+        .flush(if_id_flush),
         .pc_in(if_pc),
         .pc_plus4_in(if_pc_plus4),
         .instruction_in(if_instruction),
@@ -184,6 +216,7 @@ module riscv_pipelined_core (
     id_ex_reg u_id_ex_reg (
         .clk(clk),
         .reset(reset),
+        .flush(id_ex_flush),
         .pc_in(id_pc),
         .pc_plus4_in(id_pc_plus4),
         .read_data1_in(id_read_data1),
@@ -236,8 +269,49 @@ module riscv_pipelined_core (
         .alu_control(ex_alu_control_signal)
     );
 
-    assign ex_alu_operand_a = (ex_opcode == OPCODE_AUIPC) ? ex_pc : ex_read_data1;
-    assign ex_alu_operand_b = ex_alu_src ? ex_immediate : ex_read_data2;
+    forwarding_unit u_forwarding_unit (
+        .id_ex_rs1(ex_rs1),
+        .id_ex_rs2(ex_rs2),
+        .ex_mem_rd(mem_rd),
+        .mem_wb_rd(wb_rd),
+        .ex_mem_reg_write(mem_reg_write),
+        .mem_wb_reg_write(wb_reg_write),
+        .forward_a(ex_forward_a),
+        .forward_b(ex_forward_b)
+    );
+
+    always_comb begin
+        mem_forward_data = mem_alu_result;
+
+        if (mem_jump) begin
+            mem_forward_data = mem_pc_plus4;
+        end else if (mem_opcode == OPCODE_LUI) begin
+            mem_forward_data = mem_immediate;
+        end
+    end
+
+    always_comb begin
+        ex_forwarded_data1 = ex_read_data1;
+
+        case (ex_forward_a)
+            2'b10:   ex_forwarded_data1 = mem_forward_data;
+            2'b01:   ex_forwarded_data1 = wb_writeback_data;
+            default: ex_forwarded_data1 = ex_read_data1;
+        endcase
+    end
+
+    always_comb begin
+        ex_forwarded_data2 = ex_read_data2;
+
+        case (ex_forward_b)
+            2'b10:   ex_forwarded_data2 = mem_forward_data;
+            2'b01:   ex_forwarded_data2 = wb_writeback_data;
+            default: ex_forwarded_data2 = ex_read_data2;
+        endcase
+    end
+
+    assign ex_alu_operand_a = (ex_opcode == OPCODE_AUIPC) ? ex_pc : ex_forwarded_data1;
+    assign ex_alu_operand_b = ex_alu_src ? ex_immediate : ex_forwarded_data2;
 
     alu u_alu (
         .operand_a(ex_alu_operand_a),
@@ -251,7 +325,7 @@ module riscv_pipelined_core (
         ex_branch_target = ex_pc + ex_immediate;
 
         if (ex_jump && ex_jalr) begin
-            ex_branch_target = (ex_read_data1 + ex_immediate) & 32'hffff_fffe;
+            ex_branch_target = (ex_forwarded_data1 + ex_immediate) & 32'hffff_fffe;
         end
     end
 
@@ -260,10 +334,10 @@ module riscv_pipelined_core (
 
         if (ex_branch) begin
             case (ex_funct3)
-                3'b000:  ex_branch_taken = (ex_read_data1 == ex_read_data2);
-                3'b001:  ex_branch_taken = (ex_read_data1 != ex_read_data2);
-                3'b100:  ex_branch_taken = ($signed(ex_read_data1) < $signed(ex_read_data2));
-                3'b101:  ex_branch_taken = ($signed(ex_read_data1) >= $signed(ex_read_data2));
+                3'b000:  ex_branch_taken = (ex_forwarded_data1 == ex_forwarded_data2);
+                3'b001:  ex_branch_taken = (ex_forwarded_data1 != ex_forwarded_data2);
+                3'b100:  ex_branch_taken = ($signed(ex_forwarded_data1) < $signed(ex_forwarded_data2));
+                3'b101:  ex_branch_taken = ($signed(ex_forwarded_data1) >= $signed(ex_forwarded_data2));
                 default: ex_branch_taken = 1'b0;
             endcase
         end
@@ -277,7 +351,7 @@ module riscv_pipelined_core (
         .reset(reset),
         .pc_plus4_in(ex_pc_plus4),
         .alu_result_in(ex_alu_result),
-        .write_data_in(ex_read_data2),
+        .write_data_in(ex_forwarded_data2),
         .rd_in(ex_rd),
         .branch_target_in(ex_branch_target),
         .branch_taken_in(ex_branch_taken),
@@ -361,5 +435,9 @@ module riscv_pipelined_core (
     assign ex_alu_result_debug     = ex_alu_result;
     assign mem_alu_result_debug    = mem_alu_result;
     assign wb_writeback_data_debug = wb_writeback_data;
+    assign stall_debug             = control_stall;
+    assign flush_debug             = if_id_flush || id_ex_flush;
+    assign forward_a_debug         = ex_forward_a;
+    assign forward_b_debug         = ex_forward_b;
 
 endmodule

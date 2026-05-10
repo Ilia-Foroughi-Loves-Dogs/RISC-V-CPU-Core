@@ -1,6 +1,7 @@
 module id_ex_reg (
     input  logic        clk,
     input  logic        reset,
+    input  logic        flush,
     input  logic [31:0] pc_in,
     input  logic [31:0] pc_plus4_in,
     input  logic [31:0] read_data1_in,
@@ -48,7 +49,7 @@ module id_ex_reg (
     // ID/EX stores decoded operands, immediates, register numbers, function
     // fields, and the control signals that are needed by EX, MEM, and WB.
     always_ff @(posedge clk) begin
-        if (reset) begin
+        if (reset || flush) begin
             pc_out         <= 32'h0000_0000;
             pc_plus4_out   <= 32'h0000_0000;
             read_data1_out <= 32'h0000_0000;

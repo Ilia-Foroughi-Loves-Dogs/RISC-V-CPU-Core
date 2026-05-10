@@ -1,6 +1,8 @@
 module if_id_reg (
     input  logic        clk,
     input  logic        reset,
+    input  logic        write_enable,
+    input  logic        flush,
     input  logic [31:0] pc_in,
     input  logic [31:0] pc_plus4_in,
     input  logic [31:0] instruction_in,
@@ -13,11 +15,11 @@ module if_id_reg (
 
     // IF/ID stores the fetched instruction and its fetch PC for decode.
     always_ff @(posedge clk) begin
-        if (reset) begin
+        if (reset || flush) begin
             pc_out          <= 32'h0000_0000;
             pc_plus4_out    <= 32'h0000_0000;
             instruction_out <= NOP;
-        end else begin
+        end else if (write_enable) begin
             pc_out          <= pc_in;
             pc_plus4_out    <= pc_plus4_in;
             instruction_out <= instruction_in;

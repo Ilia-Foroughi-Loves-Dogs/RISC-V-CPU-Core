@@ -197,6 +197,24 @@ Branches are resolved in the same cycle using the register operands:
 `jal` uses a PC-relative J-type immediate. `jalr` uses `rs1 + I-type immediate`
 and clears bit 0 of the target address.
 
+## Pipeline Hazard Handling
+
+The pipelined core in `rtl/riscv_pipelined_core.sv` includes basic Phase 8
+hazard handling while the single-cycle core remains unchanged.
+
+- The forwarding unit selects EX/MEM or MEM/WB results for ID/EX source
+  operands when an instruction depends on a recent register write.
+- The hazard detection unit detects load-use hazards and taken branch/jump
+  control hazards.
+- Stall control holds the PC and IF/ID register for a load-use hazard.
+- Flush control clears IF/ID and ID/EX to safe NOP-like values for bubbles and
+  wrong-path instructions.
+
+Forwarding feeds ALU operands, branch comparisons, `jalr` target calculation,
+and store write data. Load-use hazards still require one bubble because the
+loaded data is not available soon enough for the immediately following EX
+stage.
+
 ## Memory Model
 
 The current memory model is simulation-oriented:

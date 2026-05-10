@@ -1,7 +1,7 @@
 # Testing
 
 This document explains the simulation and verification workflow for the
-single-cycle and Phase 7 pipelined RISC-V CPU cores.
+single-cycle and Phase 8 pipelined RISC-V CPU cores.
 
 ## Required Tools
 
@@ -26,7 +26,8 @@ This runs:
 - All module-level tests
 - The integrated core test
 - All directed instruction program tests
-- The Phase 7 pipelined core test
+- The pipelined core test
+- The Phase 8 pipeline hazard tests
 
 ## How to Run Module Tests
 
@@ -47,6 +48,8 @@ Individual module targets:
 | `make test-control` | `tb/tb_control_unit.sv` | `rtl/control_unit.sv` |
 | `make test-alu-control` | `tb/tb_alu_control.sv` | `rtl/alu_control.sv` |
 | `make test-dmem` | `tb/tb_data_memory.sv` | `rtl/data_memory.sv` |
+| `make test-forwarding-unit` | `tb/tb_forwarding_unit.sv` | `rtl/forwarding_unit.sv` |
+| `make test-hazard-unit` | `tb/tb_hazard_detection_unit.sv` | `rtl/hazard_detection_unit.sv` |
 
 ## How to Run the Core Test
 
@@ -71,7 +74,7 @@ built-in final check.
 
 ## How to Run the Pipelined Core Test
 
-Run the Phase 7 pipelined CPU test:
+Run the pipelined CPU test:
 
 ```sh
 make test-pipeline
@@ -85,8 +88,8 @@ tests/programs/pipeline_basic.mem
 ```
 
 The testbench prints a cycle trace with IF PC, ID instruction, EX ALU result,
-MEM ALU result, and WB writeback data. It checks that the program writes the
-expected register and memory values.
+MEM ALU result, WB writeback data, stall, flush, and forwarding debug signals.
+It checks that the program writes the expected register and memory values.
 
 `pipeline_basic.asm` tests basic pipelined execution with:
 
@@ -96,9 +99,42 @@ expected register and memory values.
 - `sw x3, 4(x0)`
 - `lw x4, 4(x0)`
 
-NOPs are inserted because the Phase 7 pipeline does not have forwarding or
-hazard detection. The NOPs give producer instructions enough cycles to reach WB
-before dependent consumers read the register file.
+NOPs remain in this legacy program so it continues to exercise the original
+Phase 7-style flow. Phase 8 adds separate programs that remove many manual NOPs.
+
+## How to Run Pipeline Hazard Tests
+
+Run the forwarding unit test:
+
+```sh
+make test-forwarding-unit
+```
+
+Run the hazard detection unit test:
+
+```sh
+make test-hazard-unit
+```
+
+Run all Phase 8 pipeline hazard tests:
+
+```sh
+make test-pipeline-hazards
+```
+
+Run individual pipelined hazard programs:
+
+```sh
+make test-pipeline-forwarding
+make test-pipeline-load-use
+make test-pipeline-branch-flush
+```
+
+The same pipelined testbench can load any checked-in program image with:
+
+```sh
+make test-pipeline PROGRAM=tests/programs/pipeline_forwarding.mem
+```
 
 ## How to Run Instruction Program Tests
 
@@ -230,6 +266,9 @@ intent, while the `.mem` files are the actual simulation inputs.
 | `upper_tests.mem` | `make test-upper-program` | `lui` and `auipc` immediate writeback behavior. |
 | `full_program_test.mem` | `make test-full-program` | Combined arithmetic, immediate, load/store, branch, jump, and upper-immediate behavior. |
 | `pipeline_basic.mem` | `make test-pipeline` | Basic 5-stage pipeline flow with manual NOPs around data dependencies. |
+| `pipeline_forwarding.mem` | `make test-pipeline-forwarding` | ALU dependencies without manual NOPs and forwarded store data. |
+| `pipeline_load_use.mem` | `make test-pipeline-load-use` | A load-use dependency that requires one automatic stall and MEM/WB forwarding. |
+| `pipeline_branch_flush.mem` | `make test-pipeline-branch-flush` | Taken branch and jump behavior with wrong-path instruction flushes. |
 
 Expected final values are also summarized in
 [tests/programs/README.md](../tests/programs/README.md).

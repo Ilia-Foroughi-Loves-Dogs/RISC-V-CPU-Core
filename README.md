@@ -4,7 +4,7 @@ A SystemVerilog implementation of a small RV32I CPU core, built as a serious
 portfolio project with readable RTL, directed tests, and implementation-focused
 documentation.
 
-Current status: **Phase 7 - 5-Stage Pipeline Upgrade**
+Current status: **Phase 8 - Hazard Detection and Forwarding**
 
 ## Project Summary
 
@@ -13,15 +13,15 @@ the RV32I base integer ISA. It includes the original single-cycle core and a
 first 5-stage pipelined core. The current design prioritizes clarity,
 testability, and architectural correctness over performance.
 
-The original single-cycle CPU remains preserved, and a first 5-stage pipelined
-CPU has been added. The Phase 7 pipeline intentionally does not include full
-hazard detection, forwarding, stalls, or flushes yet, so pipeline programs must
-use independent instructions or manual NOPs around dependencies.
+The original single-cycle CPU remains preserved, and the 5-stage pipelined CPU
+now includes basic hazard handling: EX/MEM forwarding, MEM/WB forwarding,
+load-use stalls, and simple taken branch/jump flushes.
 
 ## Current Features
 
 - Single-cycle RV32I CPU core
 - Basic 5-stage pipelined RV32I CPU core
+- Pipeline forwarding and load-use hazard detection
 - 32-bit datapath
 - 32-register register file
 - x0 hardwired to zero
@@ -49,28 +49,30 @@ use independent instructions or manual NOPs around dependencies.
 - VCD waveform generation for the integrated core
 - VCD waveform generation for the pipelined core
 
-## Phase 7 Pipeline Status
+## Phase 8 Pipeline Status
 
-A first version of a classic 5-stage pipeline is now available:
+A classic 5-stage pipeline is available:
 
 ```text
 IF -> ID -> EX -> MEM -> WB
 ```
 
 The original single-cycle CPU in `rtl/riscv_core.sv` is still the baseline
-core and remains part of the regression. The new pipeline uses dedicated
-pipeline registers between stages and runs simple programs such as
-`tests/programs/pipeline_basic.mem`.
+core and remains part of the regression. The pipeline uses dedicated pipeline
+registers between stages and runs both the original NOP-padded
+`tests/programs/pipeline_basic.mem` program and Phase 8 hazard programs.
 
-Current Phase 7 limitations:
+Phase 8 hazard handling includes:
 
-- No forwarding unit yet
-- No hazard detection unit yet
-- No automatic load-use stalls yet
-- No branch/jump flush logic yet
-- Programs with data dependencies need manual NOPs
+- `rtl/forwarding_unit.sv` selects EX/MEM or MEM/WB results for EX operands.
+- `rtl/hazard_detection_unit.sv` detects load-use hazards and control hazards.
+- Load-use hazards hold the PC and IF/ID register while inserting an ID/EX
+  bubble.
+- Taken branches and jumps flush younger wrong-path instructions.
+- Store data uses forwarded `rs2` values when needed.
 
-Hazard detection and forwarding are planned for Phase 8.
+The current pipeline still keeps branch handling simple: branches and jumps
+resolve in EX and there is no branch prediction.
 
 ## Supported RV32I Instruction Subset
 
@@ -154,6 +156,15 @@ Run the Phase 7 pipelined CPU test:
 make test-pipeline
 ```
 
+Run the new Phase 8 hazard tests:
+
+```sh
+make test-forwarding-unit
+make test-hazard-unit
+make test-pipeline-hazards
+make test-all
+```
+
 Run all instruction program tests:
 
 ```sh
@@ -229,8 +240,8 @@ run the existing tests.
 - Phase 4 - Simulation and testbench system: complete
 - Phase 5 - Instruction test programs: complete
 - Phase 6 - Documentation and diagrams: complete
-- Phase 7 - 5-stage pipeline upgrade: current
-- Phase 8 - Hazard detection and forwarding
+- Phase 7 - 5-stage pipeline upgrade: complete
+- Phase 8 - Hazard detection and forwarding: current
 - Phase 9 - Control flow improvements
 - Phase 10 - Final polish and portfolio release
 
@@ -238,7 +249,6 @@ See [docs/development_plan.md](docs/development_plan.md) for the phase plan.
 
 ## Future Improvements
 
-- Add pipeline hazard detection, forwarding, stalls, and flushes
 - Expand branch and jump handling for the pipelined design
 - Add more automated assembly-to-memory-image tooling
 - Add more waveform screenshots and exported diagrams
@@ -250,5 +260,5 @@ This project demonstrates CPU architecture fundamentals, SystemVerilog RTL
 design, module integration, instruction decoding, datapath control,
 testbench-driven verification, waveform debugging, and technical documentation.
 The current implementation is intentionally modest: it has a working
-single-cycle RV32I subset core, a first basic pipelined core, directed tests,
-and documented limitations for future hazard and control-flow work.
+single-cycle RV32I subset core, a hazard-aware pipelined core, directed tests,
+and documented limitations for future control-flow work.
