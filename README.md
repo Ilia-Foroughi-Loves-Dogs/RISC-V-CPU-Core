@@ -4,7 +4,7 @@ A SystemVerilog implementation of a small RV32I CPU core, built as a serious
 portfolio project with readable RTL, directed tests, and implementation-focused
 documentation.
 
-Current status: **Phase 8 - Hazard Detection and Forwarding**
+Current status: **Phase 9 - Control Flow Improvements**
 
 ## Project Summary
 
@@ -14,8 +14,8 @@ first 5-stage pipelined core. The current design prioritizes clarity,
 testability, and architectural correctness over performance.
 
 The original single-cycle CPU remains preserved, and the 5-stage pipelined CPU
-now includes basic hazard handling: EX/MEM forwarding, MEM/WB forwarding,
-load-use stalls, and simple taken branch/jump flushes.
+now includes hazard handling plus clearer branch, `jal`, and `jalr` control
+flow behavior.
 
 ## Current Features
 
@@ -30,7 +30,7 @@ load-use stalls, and simple taken branch/jump flushes.
 - Control unit
 - Instruction memory
 - Data memory
-- Branch and jump support
+- Branch and jump support, including pipelined `jal` and `jalr`
 - Instruction-level test programs
 - Makefile-based simulation workflow
 
@@ -49,7 +49,7 @@ load-use stalls, and simple taken branch/jump flushes.
 - VCD waveform generation for the integrated core
 - VCD waveform generation for the pipelined core
 
-## Phase 8 Pipeline Status
+## Phase 9 Pipeline Status
 
 A classic 5-stage pipeline is available:
 
@@ -62,7 +62,7 @@ core and remains part of the regression. The pipeline uses dedicated pipeline
 registers between stages and runs both the original NOP-padded
 `tests/programs/pipeline_basic.mem` program and Phase 8 hazard programs.
 
-Phase 8 hazard handling includes:
+Pipeline hazard and control-flow handling includes:
 
 - `rtl/forwarding_unit.sv` selects EX/MEM or MEM/WB results for EX operands.
 - `rtl/hazard_detection_unit.sv` detects load-use hazards and control hazards.
@@ -70,9 +70,30 @@ Phase 8 hazard handling includes:
   bubble.
 - Taken branches and jumps flush younger wrong-path instructions.
 - Store data uses forwarded `rs2` values when needed.
+- Branch comparisons use forwarded operands in EX.
+- `jal` writes `PC + 4`, redirects to the J-type target, and flushes the
+  wrong path.
+- `jalr` writes `PC + 4`, redirects to `(rs1 + imm) & ~1`, and uses forwarded
+  `rs1` when needed.
 
-The current pipeline still keeps branch handling simple: branches and jumps
-resolve in EX and there is no branch prediction.
+The current pipeline keeps control flow simple and honest: it predicts not
+taken, fetches sequentially, resolves branches and jumps in EX, and flushes
+IF/ID plus ID/EX when the PC is redirected. There is no branch target buffer or
+advanced branch prediction.
+
+## Phase 9 Control-Flow Tests
+
+New directed programs cover the pipelined branch and jump paths:
+
+- `pipeline_branch_taken.mem`: forwarded `beq` operands, taken redirect, and
+  wrong-path flush; expects `memory[20] = 42`.
+- `pipeline_branch_not_taken.mem`: forwarded `beq` operands with sequential PC;
+  expects `memory[24] = 42`.
+- `pipeline_jal.mem`: `jal` link writeback and wrong-path flush; expects
+  `x1 = 4` and `memory[28] = 42`.
+- `pipeline_jalr.mem`: forwarded `jalr` base register, link writeback, target
+  bit 0 clear behavior, and wrong-path flush; expects `x1 = 8` and
+  `memory[32] = 42`.
 
 ## Supported RV32I Instruction Subset
 
@@ -150,18 +171,25 @@ Run the integrated single-cycle CPU test:
 make test-core
 ```
 
-Run the Phase 7 pipelined CPU test:
+Run the pipelined CPU test:
 
 ```sh
 make test-pipeline
 ```
 
-Run the new Phase 8 hazard tests:
+Run the Phase 8 hazard tests:
 
 ```sh
 make test-forwarding-unit
 make test-hazard-unit
 make test-pipeline-hazards
+make test-all
+```
+
+Run the Phase 9 control-flow tests:
+
+```sh
+make test-pipeline-control-flow
 make test-all
 ```
 

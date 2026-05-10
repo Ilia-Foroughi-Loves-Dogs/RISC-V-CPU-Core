@@ -3,8 +3,9 @@
 ## Overview
 
 Phase 7 introduced a basic 5-stage RV32I pipeline alongside the original
-single-cycle CPU. Phase 8 adds the first hazard handling: forwarding, load-use
-stalls, bubbles, and simple taken branch/jump flushes.
+single-cycle CPU. Phase 8 added forwarding, load-use stalls, bubbles, and
+simple taken branch/jump flushes. Phase 9 makes branch and jump behavior more
+explicit and adds directed control-flow tests.
 
 ```text
 IF -> ID -> EX -> MEM -> WB
@@ -108,6 +109,53 @@ defaults.
 
 Taken branches and jumps resolve in EX. When a branch or jump is taken, IF/ID
 and ID/EX are flushed so younger wrong-path instructions do not commit.
+
+## Phase 9 Control Flow Handling
+
+The pipelined core uses a static predict-not-taken policy. The fetch stage keeps
+using `PC + 4` until the instruction in EX proves that control flow should
+change. This keeps the design readable and avoids a branch target buffer in the
+current phase.
+
+Conditional branches are resolved in EX with forwarded operands:
+
+- `beq`: branch when `rs1 == rs2`
+- `bne`: branch when `rs1 != rs2`
+- `blt`: branch when signed `rs1 < rs2`
+- `bge`: branch when signed `rs1 >= rs2`
+
+When a branch is taken, the next PC becomes `branch_pc + B-type immediate`.
+The younger instructions already fetched on the sequential path are wrong-path
+instructions, so IF/ID and ID/EX are flushed to safe NOP-like defaults.
+
+Example:
+
+```asm
+beq  x1, x2, target
+addi x3, x0, 99
+target:
+addi x3, x0, 42
+```
+
+If the branch is taken, the `addi x3, x0, 99` instruction was fetched from the
+predicted sequential path and must be flushed. The target instruction then
+writes `x3 = 42`.
+
+`jal` is also resolved in EX. It writes `PC + 4` to `rd`, redirects the next PC
+to `PC + J-type immediate`, and flushes younger wrong-path instructions.
+
+`jalr` writes `PC + 4` to `rd`, redirects to
+`(forwarded_rs1 + I-type immediate) & 32'hffff_fffe`, and flushes younger
+wrong-path instructions. Forwarding into the `jalr` base calculation lets a
+sequence such as `addi x5, x0, target` followed immediately by `jalr x1, 0(x5)`
+work without manual NOPs.
+
+Current limitations:
+
+- Branch and jump resolution happens in EX, so taken control flow costs flushes.
+- The policy is predict not taken only.
+- There is no branch target buffer, return-address stack, or dynamic predictor.
+- The ISA scope remains the existing RV32I subset.
 
 ### Remaining Limitations
 

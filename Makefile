@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -61,6 +61,7 @@ help:
 	@echo "  make test-forwarding-unit Test the forwarding unit"
 	@echo "  make test-hazard-unit Test the hazard detection unit"
 	@echo "  make test-pipeline-hazards Run all Phase 8 pipeline hazard tests"
+	@echo "  make test-pipeline-control-flow Run all Phase 9 pipeline control-flow tests"
 	@echo "  make test-programs    Run all Phase 5 instruction program tests"
 	@echo "  make wave-core        Run the CPU test and generate $(CORE_WAVE)"
 	@echo "  make wave-pipeline    Run the pipelined CPU test and generate $(PIPELINE_WAVE)"
@@ -75,7 +76,7 @@ help:
 
 test: test-all
 
-test-all: test-modules test-core test-programs test-pipeline test-pipeline-hazards
+test-all: test-modules test-core test-programs test-pipeline test-pipeline-hazards test-pipeline-control-flow
 
 sim-dirs:
 	@mkdir -p $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR)
@@ -109,6 +110,24 @@ test-pipeline-branch-flush: sim-dirs
 	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_branch_flush.mem | tee $(SIM_LOG_DIR)/pipeline_branch_flush.log
 
 test-pipeline-hazards: test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush
+
+test-pipeline-branch-taken: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_branch_taken.mem | tee $(SIM_LOG_DIR)/pipeline_branch_taken.log
+
+test-pipeline-branch-not-taken: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_branch_not_taken.mem | tee $(SIM_LOG_DIR)/pipeline_branch_not_taken.log
+
+test-pipeline-jal: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_jal.mem | tee $(SIM_LOG_DIR)/pipeline_jal.log
+
+test-pipeline-jalr: sim-dirs
+	iverilog -g2012 -s tb_riscv_pipelined_core -o $(PIPELINE_OUT) $(PIPELINE_RTL) tb/tb_riscv_pipelined_core.sv
+	vvp $(PIPELINE_OUT) +PROGRAM=tests/programs/pipeline_jalr.mem | tee $(SIM_LOG_DIR)/pipeline_jalr.log
+
+test-pipeline-control-flow: test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr
 
 wave-core: test-core
 	@echo "Waveform written to $(CORE_WAVE)"

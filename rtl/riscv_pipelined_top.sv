@@ -8,6 +8,11 @@ module riscv_pipelined_top (
     output logic [31:0] wb_writeback_data_debug,
     output logic        stall_debug,
     output logic        flush_debug,
+    output logic        branch_taken_debug,
+    output logic        jump_taken_debug,
+    output logic [31:0] branch_target_debug,
+    output logic [31:0] jump_target_debug,
+    output logic [31:0] pc_next_debug,
     output logic [1:0]  forward_a_debug,
     output logic [1:0]  forward_b_debug
 );
@@ -22,6 +27,11 @@ module riscv_pipelined_top (
         .wb_writeback_data_debug(wb_writeback_data_debug),
         .stall_debug(stall_debug),
         .flush_debug(flush_debug),
+        .branch_taken_debug(branch_taken_debug),
+        .jump_taken_debug(jump_taken_debug),
+        .branch_target_debug(branch_target_debug),
+        .jump_target_debug(jump_target_debug),
+        .pc_next_debug(pc_next_debug),
         .forward_a_debug(forward_a_debug),
         .forward_b_debug(forward_b_debug)
     );

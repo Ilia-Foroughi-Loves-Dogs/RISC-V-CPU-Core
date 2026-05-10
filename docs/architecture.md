@@ -215,6 +215,25 @@ and store write data. Load-use hazards still require one bubble because the
 loaded data is not available soon enough for the immediately following EX
 stage.
 
+## Control Flow in the Pipelined Core
+
+The pipelined core uses predict-not-taken control flow. IF fetches `PC + 4`
+until EX resolves a taken branch, `jal`, or `jalr`.
+
+Branch comparison happens in EX using forwarded `rs1` and `rs2` values. The
+implemented branch conditions are `beq`, `bne`, signed `blt`, and signed `bge`.
+The branch target is generated as the branch instruction PC plus the B-type
+immediate.
+
+Jump target generation also happens in EX. `jal` uses the instruction PC plus
+the J-type immediate. `jalr` uses forwarded `rs1` plus the I-type immediate and
+clears target bit 0. Both jump forms write `PC + 4` to `rd`.
+
+PC selection gives priority to a resolved jump or taken branch over sequential
+fetch. When the PC redirects, IF/ID and ID/EX are flushed so younger wrong-path
+instructions cannot write registers or memory. Older valid instructions already
+in later stages continue normally.
+
 ## Memory Model
 
 The current memory model is simulation-oriented:

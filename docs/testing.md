@@ -1,7 +1,7 @@
 # Testing
 
 This document explains the simulation and verification workflow for the
-single-cycle and Phase 8 pipelined RISC-V CPU cores.
+single-cycle and Phase 9 pipelined RISC-V CPU cores.
 
 ## Required Tools
 
@@ -28,6 +28,7 @@ This runs:
 - All directed instruction program tests
 - The pipelined core test
 - The Phase 8 pipeline hazard tests
+- The Phase 9 pipeline control-flow tests
 
 ## How to Run Module Tests
 
@@ -136,6 +137,45 @@ The same pipelined testbench can load any checked-in program image with:
 make test-pipeline PROGRAM=tests/programs/pipeline_forwarding.mem
 ```
 
+## How to Run Pipeline Control-Flow Tests
+
+Run all Phase 9 pipeline control-flow tests:
+
+```sh
+make test-pipeline-control-flow
+```
+
+Run individual control-flow programs:
+
+```sh
+make test-pipeline-branch-taken
+make test-pipeline-branch-not-taken
+make test-pipeline-jal
+make test-pipeline-jalr
+```
+
+These targets use the same `tb/tb_riscv_pipelined_core.sv` testbench and
+`+PROGRAM=tests/programs/name.mem` plusarg. The trace prints IF PC, next PC, ID
+instruction, EX/MEM/WB values, stall, flush, branch taken, jump taken, branch
+target, jump target, and forwarding select signals.
+
+Interpretation notes:
+
+- A taken branch or jump should show `fl = 1` while IF/ID and ID/EX are flushed.
+- `br = 1` means the EX-stage branch condition was true.
+- `jp = 1` means an EX-stage `jal` or `jalr` redirected the PC.
+- `pc_next` should match the printed branch or jump target on a redirect.
+- The final self-checks verify the expected register and data memory state.
+
+The Phase 9 programs check:
+
+| Program | What it checks | Expected behavior |
+| --- | --- | --- |
+| `pipeline_branch_taken.mem` | Forwarded `beq` operands, taken branch redirect, wrong-path flush | `x3 = 42`, `memory[20] = 42` |
+| `pipeline_branch_not_taken.mem` | Forwarded `beq` operands with sequential PC | `x3 = 42`, `memory[24] = 42` |
+| `pipeline_jal.mem` | `jal` target selection, link writeback, wrong-path flush | `x1 = 4`, `x3 = 42`, `memory[28] = 42` |
+| `pipeline_jalr.mem` | Forwarded `jalr` base, target bit 0 clear, link writeback, wrong-path flush | `x1 = 8`, `x3 = 42`, `memory[32] = 42` |
+
 ## How to Run Instruction Program Tests
 
 Run all directed instruction programs:
@@ -211,6 +251,10 @@ sim/logs/branch_tests.log
 sim/logs/jump_tests.log
 sim/logs/upper_tests.log
 sim/logs/full_program_test.log
+sim/logs/pipeline_branch_taken.log
+sim/logs/pipeline_branch_not_taken.log
+sim/logs/pipeline_jal.log
+sim/logs/pipeline_jalr.log
 ```
 
 Compiled simulation binaries are stored in:

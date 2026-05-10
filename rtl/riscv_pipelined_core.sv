@@ -8,6 +8,11 @@ module riscv_pipelined_core (
     output logic [31:0] wb_writeback_data_debug,
     output logic        stall_debug,
     output logic        flush_debug,
+    output logic        branch_taken_debug,
+    output logic        jump_taken_debug,
+    output logic [31:0] branch_target_debug,
+    output logic [31:0] jump_target_debug,
+    output logic [31:0] pc_next_debug,
     output logic [1:0]  forward_a_debug,
     output logic [1:0]  forward_b_debug
 );
@@ -81,6 +86,10 @@ module riscv_pipelined_core (
     logic        ex_alu_zero;
     logic [31:0] ex_branch_target;
     logic        ex_branch_taken;
+    logic        ex_jump_taken;
+    logic [31:0] ex_jump_target;
+    logic        ex_control_flow_taken;
+    logic [31:0] ex_control_flow_target;
 
     logic [31:0] mem_pc_plus4;
     logic [31:0] mem_alu_result;
@@ -126,15 +135,15 @@ module riscv_pipelined_core (
 
     assign if_pc_plus4 = if_pc + 32'd4;
 
-    // Phase 7 resolves branch and jump targets in EX, but it does not flush
-    // younger instructions yet. Branch-heavy programs are Phase 8/9 work.
+    // The pipeline uses a simple predict-not-taken policy. Sequential fetch
+    // continues until EX proves that a branch or jump should redirect the PC.
     always_comb begin
         if_next_pc = if_pc_plus4;
 
         if (!pc_write) begin
             if_next_pc = if_pc;
-        end else if (ex_branch_taken || ex_jump) begin
-            if_next_pc = ex_branch_target;
+        end else if (ex_control_flow_taken) begin
+            if_next_pc = ex_control_flow_target;
         end
     end
 
@@ -144,7 +153,7 @@ module riscv_pipelined_core (
         .id_ex_rd(ex_rd),
         .id_ex_mem_read(ex_mem_read),
         .branch_taken(ex_branch_taken),
-        .jump_taken(ex_jump),
+        .jump_taken(ex_jump_taken),
         .pc_write(pc_write),
         .if_id_write(if_id_write),
         .control_stall(control_stall),
@@ -321,14 +330,13 @@ module riscv_pipelined_core (
         .zero(ex_alu_zero)
     );
 
-    always_comb begin
-        ex_branch_target = ex_pc + ex_immediate;
+    assign ex_branch_target = ex_pc + ex_immediate;
+    assign ex_jump_taken    = ex_jump;
+    assign ex_jump_target   = ex_jalr ? ((ex_forwarded_data1 + ex_immediate) & 32'hffff_fffe)
+                                      : (ex_pc + ex_immediate);
 
-        if (ex_jump && ex_jalr) begin
-            ex_branch_target = (ex_forwarded_data1 + ex_immediate) & 32'hffff_fffe;
-        end
-    end
-
+    // Branch comparisons use the same forwarded operands as the ALU. This
+    // keeps sequences such as addi/addi/beq correct without manual NOPs.
     always_comb begin
         ex_branch_taken = 1'b0;
 
@@ -343,6 +351,19 @@ module riscv_pipelined_core (
         end
     end
 
+    always_comb begin
+        ex_control_flow_taken  = 1'b0;
+        ex_control_flow_target = if_pc_plus4;
+
+        if (ex_jump_taken) begin
+            ex_control_flow_taken  = 1'b1;
+            ex_control_flow_target = ex_jump_target;
+        end else if (ex_branch_taken) begin
+            ex_control_flow_taken  = 1'b1;
+            ex_control_flow_target = ex_branch_target;
+        end
+    end
+
     // ---------------------------------------------------------------------
     // EX/MEM pipeline register.
     // ---------------------------------------------------------------------
@@ -353,7 +374,7 @@ module riscv_pipelined_core (
         .alu_result_in(ex_alu_result),
         .write_data_in(ex_forwarded_data2),
         .rd_in(ex_rd),
-        .branch_target_in(ex_branch_target),
+        .branch_target_in(ex_control_flow_target),
         .branch_taken_in(ex_branch_taken),
         .immediate_in(ex_immediate),
         .opcode_in(ex_opcode),
@@ -437,6 +458,11 @@ module riscv_pipelined_core (
     assign wb_writeback_data_debug = wb_writeback_data;
     assign stall_debug             = control_stall;
     assign flush_debug             = if_id_flush || id_ex_flush;
+    assign branch_taken_debug      = ex_branch_taken;
+    assign jump_taken_debug        = ex_jump_taken;
+    assign branch_target_debug     = ex_branch_target;
+    assign jump_target_debug       = ex_jump_target;
+    assign pc_next_debug           = if_next_pc;
     assign forward_a_debug         = ex_forward_a;
     assign forward_b_debug         = ex_forward_b;
 

@@ -15,6 +15,11 @@ module tb_riscv_pipelined_core;
     logic [31:0] wb_writeback_data_debug;
     logic        stall_debug;
     logic        flush_debug;
+    logic        branch_taken_debug;
+    logic        jump_taken_debug;
+    logic [31:0] branch_target_debug;
+    logic [31:0] jump_target_debug;
+    logic [31:0] pc_next_debug;
     logic [1:0]  forward_a_debug;
     logic [1:0]  forward_b_debug;
     int unsigned cycle_count;
@@ -31,6 +36,11 @@ module tb_riscv_pipelined_core;
         .wb_writeback_data_debug(wb_writeback_data_debug),
         .stall_debug(stall_debug),
         .flush_debug(flush_debug),
+        .branch_taken_debug(branch_taken_debug),
+        .jump_taken_debug(jump_taken_debug),
+        .branch_target_debug(branch_target_debug),
+        .jump_target_debug(jump_target_debug),
+        .pc_next_debug(pc_next_debug),
         .forward_a_debug(forward_a_debug),
         .forward_b_debug(forward_b_debug)
     );
@@ -69,8 +79,8 @@ module tb_riscv_pipelined_core;
         $display("Program: %s", program_path);
         $display("Waveform: sim/waves/riscv_pipelined_core.vcd");
         $display("");
-        $display("cycle | if_pc    | id_instr  | ex_alu   | mem_alu  | wb_data  | st | fl | fa | fb");
-        $display("------+----------+-----------+----------+----------+----------+----+----+----+---");
+        $display("cycle | if_pc    | pc_next  | id_instr  | ex_alu   | mem_alu  | wb_data  | st | fl | br | jp | br_tgt  | jp_tgt  | fa | fb");
+        $display("------+----------+----------+-----------+----------+----------+----------+----+----+----+----+---------+---------+----+---");
 
         reset = 1'b1;
         repeat (RESET_CYCLES) @(posedge clk);
@@ -78,10 +88,12 @@ module tb_riscv_pipelined_core;
 
         repeat (RUN_CYCLES) begin
             @(negedge clk);
-            $display("%5d | %08h | %08h  | %08h | %08h | %08h | %1b  | %1b  | %02b | %02b",
-                     cycle_count, if_pc_debug, id_instruction_debug,
+            $display("%5d | %08h | %08h | %08h  | %08h | %08h | %08h | %1b  | %1b  | %1b  | %1b  | %08h | %08h | %02b | %02b",
+                     cycle_count, if_pc_debug, pc_next_debug, id_instruction_debug,
                      ex_alu_result_debug, mem_alu_result_debug,
                      wb_writeback_data_debug, stall_debug, flush_debug,
+                     branch_taken_debug, jump_taken_debug,
+                     branch_target_debug, jump_target_debug,
                      forward_a_debug, forward_b_debug);
             cycle_count++;
         end
@@ -108,6 +120,25 @@ module tb_riscv_pipelined_core;
             check_equal("x5 wrong-path jump write flushed", dut.u_register_file.registers[5], 32'd0);
             check_equal("x6 jump target result", dut.u_register_file.registers[6], 32'd9);
             check_equal("branch flush store word 5", dut.u_data_memory.memory[5], 32'd9);
+        end else if (program_path == "tests/programs/pipeline_branch_taken.mem") begin
+            check_equal("x1 branch operand", dut.u_register_file.registers[1], 32'd5);
+            check_equal("x2 branch operand", dut.u_register_file.registers[2], 32'd5);
+            check_equal("x3 taken branch result", dut.u_register_file.registers[3], 32'd42);
+            check_equal("taken branch store word 5", dut.u_data_memory.memory[5], 32'd42);
+        end else if (program_path == "tests/programs/pipeline_branch_not_taken.mem") begin
+            check_equal("x1 branch operand", dut.u_register_file.registers[1], 32'd5);
+            check_equal("x2 branch operand", dut.u_register_file.registers[2], 32'd7);
+            check_equal("x3 not-taken branch result", dut.u_register_file.registers[3], 32'd42);
+            check_equal("not-taken branch store word 6", dut.u_data_memory.memory[6], 32'd42);
+        end else if (program_path == "tests/programs/pipeline_jal.mem") begin
+            check_equal("x1 jal return address", dut.u_register_file.registers[1], 32'd4);
+            check_equal("x3 jal target result", dut.u_register_file.registers[3], 32'd42);
+            check_equal("jal store word 7", dut.u_data_memory.memory[7], 32'd42);
+        end else if (program_path == "tests/programs/pipeline_jalr.mem") begin
+            check_equal("x1 jalr return address", dut.u_register_file.registers[1], 32'd8);
+            check_equal("x3 jalr target result", dut.u_register_file.registers[3], 32'd42);
+            check_equal("x5 jalr target base", dut.u_register_file.registers[5], 32'd12);
+            check_equal("jalr store word 8", dut.u_data_memory.memory[8], 32'd42);
         end else begin
             check_equal("x1 addi result", dut.u_register_file.registers[1], 32'd5);
             check_equal("x2 addi result", dut.u_register_file.registers[2], 32'd7);
