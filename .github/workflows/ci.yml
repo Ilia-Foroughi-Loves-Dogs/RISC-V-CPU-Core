@@ -1,0 +1,36 @@
+# RISC-V CPU Core CI
+#
+# This workflow automatically runs the project's simulation regression on
+# GitHub whenever code is pushed or a pull request is opened.
+name: RISC-V CPU Core CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run SystemVerilog Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Icarus Verilog provides iverilog and vvp, which compile and run the
+      # SystemVerilog testbenches used by this CPU core project.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog make
+
+      - name: Show tool versions
+        run: |
+          make --version
+          iverilog -V
+          vvp -V
+
+      # The Makefile's test-all target is the full regression, so CI runs it
+      # to catch simulation regressions on pushes and pull requests.
+      - name: Run all tests
+        run: make test-all

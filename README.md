@@ -1,5 +1,7 @@
 # RISC-V CPU Core
 
+[![RISC-V CPU Core CI](https://github.com/Ilia-Foroughi-Loves-Dogs/RISC-V-CPU-Core/actions/workflows/ci.yml/badge.svg)](https://github.com/Ilia-Foroughi-Loves-Dogs/RISC-V-CPU-Core/actions/workflows/ci.yml)
+
 ![Language: SystemVerilog](https://img.shields.io/badge/Language-SystemVerilog-blue)
 ![Simulation: Icarus Verilog](https://img.shields.io/badge/Simulation-Icarus%20Verilog-green)
 ![Status: Educational / Portfolio Project](https://img.shields.io/badge/Status-Educational%20%2F%20Portfolio%20Project-lightgrey)
@@ -10,7 +12,7 @@ A portfolio-level SystemVerilog implementation of a small RV32I-inspired
 and documentation for the architecture, datapath, pipeline, testing flow, and
 known limitations.
 
-Current status: **Phase 10 - Final Polish and Portfolio Release**
+Current status: **Phase 11 - GitHub Actions CI**
 
 ## Key Features
 
@@ -130,6 +132,19 @@ Individual test groups are available through the Makefile:
 
 See [docs/testing.md](docs/testing.md) for the complete testing workflow.
 
+## Continuous Integration
+
+GitHub Actions is configured to run automatically on every push and pull
+request. The CI workflow installs Icarus Verilog and GNU Make, then runs:
+
+```sh
+make test-all
+```
+
+The workflow file is located at
+[.github/workflows/ci.yml](.github/workflows/ci.yml). See
+[docs/ci.md](docs/ci.md) for CI details and debugging notes.
+
 ## Generating Waveforms
 
 Generate the single-cycle core waveform:
@@ -168,6 +183,7 @@ See [docs/waveforms.md](docs/waveforms.md) for useful signals to inspect.
 - [Instruction set](docs/instruction_set.md)
 - [Control signals](docs/control_signals.md)
 - [Testing](docs/testing.md)
+- [Continuous integration](docs/ci.md)
 - [Waveforms](docs/waveforms.md)
 - [Project summary](docs/project_summary.md)
 - [Known limitations](docs/known_limitations.md)
@@ -210,9 +226,9 @@ See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
 ## Future Improvements
 
 Possible future work includes full RV32I compliance testing, an assembler flow,
-Verilator or cocotb support, GitHub Actions CI, formal verification with
-SymbiYosys, better branch prediction, cache experiments, a bus interface,
-FPGA synthesis support, and basic peripherals.
+Verilator or cocotb support, formal verification with SymbiYosys, better branch
+prediction, cache experiments, a bus interface, FPGA synthesis support, and
+basic peripherals.
 
 See [docs/future_work.md](docs/future_work.md).
 

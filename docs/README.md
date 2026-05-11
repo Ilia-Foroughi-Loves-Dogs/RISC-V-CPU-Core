@@ -19,6 +19,8 @@ Core project.
 
 - [testing.md](testing.md): Makefile targets, test programs, `.asm`/`.mem`
   workflow, logs, and debugging tips.
+- [ci.md](ci.md): GitHub Actions CI workflow, triggers, commands, and
+  debugging notes.
 - [waveforms.md](waveforms.md): VCD generation and suggested signals to inspect.
 - [demo.md](demo.md): Short command-line demo guide.
 
@@ -30,4 +32,4 @@ Core project.
   current design.
 - [future_work.md](future_work.md): Possible post-release improvements.
 - [development_plan.md](development_plan.md): Project phase history and final
-  Phase 10 status.
+  Phase 11 CI status.

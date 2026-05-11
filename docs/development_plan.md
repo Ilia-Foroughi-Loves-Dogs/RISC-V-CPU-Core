@@ -16,16 +16,17 @@ with hazard and control-flow handling.
 | Phase 7 - 5-stage pipeline upgrade | Complete | Split the design into fetch, decode, execute, memory, and writeback stages. |
 | Phase 8 - Hazard detection and forwarding | Complete | Add forwarding, load-use stall handling, and basic flush support. |
 | Phase 9 - Control flow improvements | Complete | Improve branch, `jal`, and `jalr` handling in the pipelined design. |
-| Phase 10 - Final polish and portfolio release | Current / Complete | Polish documentation, test workflow, repository presentation, limitations, and future roadmap. |
+| Phase 10 - Final polish and portfolio release | Complete | Polish documentation, test workflow, repository presentation, limitations, and future roadmap. |
+| Phase 11 - GitHub Actions CI | Current | Add GitHub Actions automation to run the full Makefile regression on pushes and pull requests. |
 
 ## Final Phase Note
 
 The project is ready to present as a portfolio-level educational CPU core. It
 has a clear scope, repeatable tests, readable RTL organization, waveform
-support, and documentation for architecture, pipeline behavior, testing, and
-limitations.
+support, documentation for architecture, pipeline behavior, testing, and
+limitations, and GitHub Actions CI configured to run the full regression.
 
 There are still meaningful future improvement opportunities, including full
 RV32I compliance testing, assembler automation, Verilator or cocotb support,
-formal verification, CI, improved branch prediction, cache experiments, FPGA
+formal verification, improved branch prediction, cache experiments, FPGA
 synthesis support, peripherals, interrupts, exceptions, and CSR support.

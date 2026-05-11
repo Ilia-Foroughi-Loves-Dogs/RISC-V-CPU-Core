@@ -40,6 +40,19 @@ make test-all
 single-cycle instruction program tests, the baseline pipelined core test,
 pipeline hazard tests, and pipeline control-flow tests.
 
+## Continuous Integration
+
+GitHub Actions is configured to run the same full regression used locally:
+
+```sh
+make test-all
+```
+
+The CI job runs on GitHub-hosted Ubuntu runners and installs Icarus Verilog so
+`iverilog` can compile the SystemVerilog testbenches and `vvp` can execute the
+simulations. Running the full regression in CI helps catch test failures and
+behavioral regressions automatically on pushes and pull requests.
+
 ## Module Tests
 
 Run all module tests:
