@@ -14,7 +14,7 @@ A portfolio-level SystemVerilog implementation of a small RV32I-inspired
 and documentation for the architecture, datapath, pipeline, testing flow, and
 known limitations.
 
-Current status: **Phase 15 - Formal verification starter**
+Current status: **Phase 16 - Desktop GUI simulator**
 
 ## Key Features
 
@@ -39,6 +39,7 @@ Current status: **Phase 15 - Formal verification starter**
 - Verilator lint checks
 - cocotb Python verification for key RTL modules
 - Optional SymbiYosys/Yosys formal checks for key RTL modules
+- Tkinter desktop GUI helper for common Makefile commands
 
 ## Architecture Overview
 
@@ -84,6 +85,7 @@ RISC-V-CPU-Core/
 ├── tb/               # SystemVerilog testbenches
 ├── cocotb_tests/     # Python cocotb module tests
 ├── formal/           # Optional SymbiYosys/Yosys formal checks
+├── gui/              # Tkinter desktop GUI simulator helper
 ├── sim/              # Generated build outputs, logs, and waveforms
 ├── tests/programs/   # Assembly listings and .mem instruction images
 ├── scripts/          # Assembly and verification helper scripts
@@ -120,6 +122,13 @@ the full regression:
 make test-all
 ```
 
+To use the beginner-friendly desktop helper for common simulation and
+verification commands:
+
+```sh
+make gui
+```
+
 If Verilator is installed, run the RTL lint checks:
 
 ```sh
@@ -154,8 +163,35 @@ make cocotb-alu
 make cocotb-register-file
 make cocotb-immgen
 make formal-all
+make gui
 make clean
 ```
+
+## Desktop GUI
+
+The desktop GUI is a small Python/Tkinter helper for running existing Makefile
+commands without typing each target manually. It provides buttons for the full
+test flow, single-cycle and pipelined simulations, pipeline hazard and
+control-flow tests, Verilator lint, cocotb tests, `.mem` verification, waveform
+generation, formal checks, and cleanup.
+
+Launch it from the repository root:
+
+```sh
+make gui
+```
+
+or:
+
+```sh
+python3 gui/riscv_gui.py
+```
+
+The GUI displays command output in a scrollable text box and reports pass/fail
+status based on each command exit code. It is only a helper for the existing
+Makefile flow; it does not change CPU behavior or add new CPU features.
+
+See [docs/gui.md](docs/gui.md) for the full GUI guide.
 
 ## Running Tests
 
@@ -315,6 +351,7 @@ See [docs/waveforms.md](docs/waveforms.md) for useful signals to inspect.
 - [Control signals](docs/control_signals.md)
 - [Testing](docs/testing.md)
 - [Assembly workflow](docs/assembler_workflow.md)
+- [Desktop GUI](docs/gui.md)
 - [Verilator](docs/verilator.md)
 - [cocotb](docs/cocotb.md)
 - [Continuous integration](docs/ci.md)
@@ -352,7 +389,7 @@ Examples include:
 - Word-only `lw` and `sw` memory access.
 - No caches, interrupts, exceptions, CSRs, privilege modes, compressed
   instructions, multiplication, division, floating point, or atomics.
-- No formal verification yet.
+- Formal verification is a starter flow covering selected modules only.
 - Pipelined control flow uses simple predict-not-taken behavior.
 
 See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
@@ -360,9 +397,9 @@ See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
 ## Future Improvements
 
 Possible future work includes full RV32I compliance testing, a fuller assembler
-flow, formal verification with SymbiYosys, broader cocotb coverage, better
-branch prediction, cache experiments, a bus interface, FPGA synthesis support,
-and basic peripherals.
+flow, broader formal coverage, broader cocotb coverage, better branch
+prediction, cache experiments, a bus interface, FPGA synthesis support, and
+basic peripherals.
 
 See [docs/future_work.md](docs/future_work.md).
 

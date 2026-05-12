@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean formal-pc formal-regfile formal-alu formal-all formal-clean asm-to-mem verify-mem regenerate-programs test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean gui test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean formal-pc formal-regfile formal-alu formal-all formal-clean asm-to-mem verify-mem regenerate-programs test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -63,6 +63,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make help                         Show this help message"
 	@echo "  make clean                        Remove generated simulation files"
+	@echo "  make gui                          Launch the desktop GUI simulator helper"
 	@echo "  make test-all                     Run the full regression"
 	@echo "  make test-modules                 Run all standalone module tests"
 	@echo "  make test-core                    Run the integrated single-cycle CPU test"
@@ -122,6 +123,9 @@ help:
 	@echo "  make test-pipeline-jalr           Run pipelined JALR program"
 
 test: test-all
+
+gui:
+	python3 gui/riscv_gui.py
 
 test-all: verify-mem test-modules test-core test-programs test-pipeline test-pipeline-hazards test-pipeline-control-flow
 

@@ -21,14 +21,16 @@ with hazard and control-flow handling.
 | Phase 12 - Verilator support | Complete | Add Verilator lint targets, CI checks, and documentation. |
 | Phase 13 - cocotb Python verification | Complete | Add Python-based cocotb tests for key RTL modules and integrate them into CI and documentation. |
 | Phase 14 - Assembly to memory file workflow | Complete | Add simple assembler tooling, memory-file verification, Make targets, CI checks, and documentation. |
-| Phase 15 - Formal verification starter | Current | Add optional SymbiYosys/Yosys formal checks for selected RTL modules and document the local proof flow. |
+| Phase 15 - Formal verification starter | Complete | Add optional SymbiYosys/Yosys formal checks for selected RTL modules and document the local proof flow. |
+| Phase 16 - Desktop GUI simulator | Current | Add a lightweight Tkinter GUI helper for running existing Makefile simulation, verification, waveform, formal, and cleanup commands. |
 
 ## Current Phase Note
 
-The current phase adds a lightweight formal verification starter without
-changing CPU behavior or the existing Icarus Verilog, Verilator, or cocotb test
-flows. The new checks use SymbiYosys/Yosys-style harnesses for selected
-module-level properties in the program counter, register file, and ALU.
+The current phase adds a lightweight desktop GUI simulator helper without
+changing CPU behavior or the existing Icarus Verilog, Verilator, cocotb, or
+formal verification flows. The GUI uses Python and Tkinter to run existing
+Makefile targets, display command output, select `.mem` programs, and point
+users to generated waveform files.
 
 There are still meaningful future improvement opportunities, including full
 RV32I compliance testing, deeper formal verification, a fuller assembler,

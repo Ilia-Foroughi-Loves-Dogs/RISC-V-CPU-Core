@@ -27,6 +27,8 @@ Core project.
   and CI integration.
 - [formal_verification.md](formal_verification.md): Optional SymbiYosys/Yosys
   formal checks for selected RTL modules.
+- [gui.md](gui.md): Desktop GUI helper for running common Makefile simulation,
+  verification, waveform, and cleanup commands.
 - [ci.md](ci.md): GitHub Actions CI workflow, triggers, commands, and
   debugging notes.
 - [waveforms.md](waveforms.md): VCD generation and suggested signals to inspect.
@@ -40,4 +42,4 @@ Core project.
   current design.
 - [future_work.md](future_work.md): Possible post-release improvements.
 - [development_plan.md](development_plan.md): Project phase history and current
-  Phase 15 formal verification starter status.
+  Phase 16 desktop GUI simulator status.
