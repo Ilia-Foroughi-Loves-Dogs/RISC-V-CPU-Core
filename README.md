@@ -14,7 +14,7 @@ A portfolio-level SystemVerilog implementation of a small RV32I-inspired
 and documentation for the architecture, datapath, pipeline, testing flow, and
 known limitations.
 
-Current status: **Phase 14 - Assembly to memory file workflow**
+Current status: **Phase 15 - Formal verification starter**
 
 ## Key Features
 
@@ -38,6 +38,7 @@ Current status: **Phase 14 - Assembly to memory file workflow**
 - VCD waveform generation
 - Verilator lint checks
 - cocotb Python verification for key RTL modules
+- Optional SymbiYosys/Yosys formal checks for key RTL modules
 
 ## Architecture Overview
 
@@ -82,6 +83,7 @@ RISC-V-CPU-Core/
 ├── rtl/              # SystemVerilog RTL modules
 ├── tb/               # SystemVerilog testbenches
 ├── cocotb_tests/     # Python cocotb module tests
+├── formal/           # Optional SymbiYosys/Yosys formal checks
 ├── sim/              # Generated build outputs, logs, and waveforms
 ├── tests/programs/   # Assembly listings and .mem instruction images
 ├── scripts/          # Assembly and verification helper scripts
@@ -103,6 +105,7 @@ Additional design checking uses:
 - Verilator for linting and RTL elaboration checks
 - GTKWave for optional waveform viewing
 - Python 3 and cocotb for Python-driven RTL verification
+- SymbiYosys, Yosys, and an SMT solver for optional formal checks
 
 Icarus Verilog is used for the main SystemVerilog testbench simulations.
 Verilator is used for linting and additional design checking. cocotb adds
@@ -150,6 +153,7 @@ make cocotb-test
 make cocotb-alu
 make cocotb-register-file
 make cocotb-immgen
+make formal-all
 make clean
 ```
 
@@ -186,6 +190,26 @@ See [docs/testing.md](docs/testing.md) for the complete testing workflow.
 Traditional SystemVerilog testbenches are still included under `tb/` and remain
 part of the main regression. cocotb complements those benches with
 Python-based verification for the ALU, register file, and immediate generator.
+
+## Formal Verification
+
+Basic formal checks were added for key RTL modules using a SymbiYosys/Yosys
+style flow. These checks complement the SystemVerilog simulations, Verilator
+lint, and cocotb tests by proving small module-level properties over all input
+values within the configured proof depth.
+
+Formal verification is optional locally and requires SymbiYosys, Yosys, and an
+SMT solver.
+
+```sh
+make formal-pc
+make formal-regfile
+make formal-alu
+make formal-all
+```
+
+The current formal setup checks the program counter, register file, and ALU.
+See [docs/formal_verification.md](docs/formal_verification.md) for details.
 
 ## Assembly Test Program Workflow
 

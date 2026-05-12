@@ -25,6 +25,8 @@ Core project.
   integration.
 - [cocotb.md](cocotb.md): Python-based cocotb verification setup, targets,
   and CI integration.
+- [formal_verification.md](formal_verification.md): Optional SymbiYosys/Yosys
+  formal checks for selected RTL modules.
 - [ci.md](ci.md): GitHub Actions CI workflow, triggers, commands, and
   debugging notes.
 - [waveforms.md](waveforms.md): VCD generation and suggested signals to inspect.
@@ -38,4 +40,4 @@ Core project.
   current design.
 - [future_work.md](future_work.md): Possible post-release improvements.
 - [development_plan.md](development_plan.md): Project phase history and current
-  Phase 14 assembly-to-memory-file workflow status.
+  Phase 15 formal verification starter status.

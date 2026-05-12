@@ -10,6 +10,7 @@ single-cycle and pipelined RISC-V CPU cores.
 - `vvp`
 - Verilator for linting and additional design checks
 - Python 3 and cocotb for Python-based module verification
+- SymbiYosys, Yosys, and an SMT solver for optional formal checks
 - GTKWave for waveform viewing
 
 The existing `.mem` files are checked into the repository. The local helper
@@ -39,6 +40,10 @@ external assembler dependencies.
 | `make cocotb-alu` | Runs the ALU cocotb test. |
 | `make cocotb-register-file` | Runs the register file cocotb test. |
 | `make cocotb-immgen` | Runs the immediate generator cocotb test. |
+| `make formal-all` | Runs all optional SymbiYosys formal checks. |
+| `make formal-pc` | Runs program counter formal checks. |
+| `make formal-regfile` | Runs register file formal checks. |
+| `make formal-alu` | Runs ALU formal checks. |
 | `make clean` | Removes generated simulation outputs. |
 
 Run the full regression with:
@@ -130,6 +135,37 @@ J-type immediates, including sign extension.
 
 These Python tests complement the SystemVerilog testbenches. They do not
 replace the existing `tb/` tests or the full CPU program regression.
+
+## Formal Verification
+
+Formal checks are separate from the simulation tests. They are optional because
+they require SymbiYosys, Yosys, and an SMT solver that may not be installed on
+every development machine.
+
+Run all formal checks with:
+
+```sh
+make formal-all
+```
+
+Run individual checks with:
+
+```sh
+make formal-pc
+make formal-regfile
+make formal-alu
+```
+
+The current formal targets check:
+
+| Target | What it proves |
+| --- | --- |
+| `make formal-pc` | Reset drives the PC to zero, normal cycles load `next_pc`, and the PC does not become unknown when inputs are known. |
+| `make formal-regfile` | `x0` reads as zero, writes to `x0` are ignored, reset clears registers, normal writes can be read back, and both read ports match the register state. |
+| `make formal-alu` | ADD, SUB, AND, OR, XOR, SLT, SLTU, and zero-flag behavior match the expected expressions. |
+
+These proofs complement the Icarus Verilog testbenches, Verilator lint, and
+cocotb tests. They do not replace the full CPU program regression.
 
 ## Module Tests
 

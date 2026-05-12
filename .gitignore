@@ -51,5 +51,11 @@ sim_build/
 results.xml
 *.xml
 
+# Formal verification outputs
+formal/*/*_formal/
+formal/**/*.vcd
+formal/**/*.xml
+formal/**/*.log
+
 # macOS files
 .DS_Store

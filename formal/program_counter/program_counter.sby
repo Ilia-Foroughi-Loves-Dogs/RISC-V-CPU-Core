@@ -1,0 +1,14 @@
+[options]
+mode prove
+depth 4
+
+[engines]
+smtbmc
+
+[script]
+read -formal -sv ../../rtl/program_counter.sv program_counter_formal.sv
+prep -top program_counter_formal
+
+[files]
+../../rtl/program_counter.sv
+program_counter_formal.sv

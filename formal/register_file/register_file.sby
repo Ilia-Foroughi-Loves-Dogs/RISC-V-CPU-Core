@@ -1,0 +1,14 @@
+[options]
+mode prove
+depth 4
+
+[engines]
+smtbmc
+
+[script]
+read -formal -sv ../../rtl/register_file.sv register_file_formal.sv
+prep -top register_file_formal
+
+[files]
+../../rtl/register_file.sv
+register_file_formal.sv

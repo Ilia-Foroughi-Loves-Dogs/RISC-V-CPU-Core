@@ -1,0 +1,14 @@
+[options]
+mode prove
+depth 1
+
+[engines]
+smtbmc
+
+[script]
+read -formal -sv ../../rtl/alu.sv alu_formal.sv
+prep -top alu_formal
+
+[files]
+../../rtl/alu.sv
+alu_formal.sv

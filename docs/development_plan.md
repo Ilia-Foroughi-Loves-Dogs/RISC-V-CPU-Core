@@ -20,16 +20,17 @@ with hazard and control-flow handling.
 | Phase 11 - GitHub Actions CI | Complete | Add GitHub Actions automation to run the full Makefile regression on pushes and pull requests. |
 | Phase 12 - Verilator support | Complete | Add Verilator lint targets, CI checks, and documentation. |
 | Phase 13 - cocotb Python verification | Complete | Add Python-based cocotb tests for key RTL modules and integrate them into CI and documentation. |
-| Phase 14 - Assembly to memory file workflow | Current | Add simple assembler tooling, memory-file verification, Make targets, CI checks, and documentation. |
+| Phase 14 - Assembly to memory file workflow | Complete | Add simple assembler tooling, memory-file verification, Make targets, CI checks, and documentation. |
+| Phase 15 - Formal verification starter | Current | Add optional SymbiYosys/Yosys formal checks for selected RTL modules and document the local proof flow. |
 
 ## Current Phase Note
 
-The current phase adds a lightweight assembly-to-memory-file workflow without
-changing CPU behavior or the existing Icarus Verilog test flow. The helper
-scripts generate `.mem` files from readable `.asm` programs and verify that
-checked-in program images remain valid and synchronized.
+The current phase adds a lightweight formal verification starter without
+changing CPU behavior or the existing Icarus Verilog, Verilator, or cocotb test
+flows. The new checks use SymbiYosys/Yosys-style harnesses for selected
+module-level properties in the program counter, register file, and ALU.
 
 There are still meaningful future improvement opportunities, including full
-RV32I compliance testing, a fuller assembler, formal verification, improved
-branch prediction, cache experiments, FPGA synthesis
-support, peripherals, interrupts, exceptions, and CSR support.
+RV32I compliance testing, deeper formal verification, a fuller assembler,
+improved branch prediction, cache experiments, FPGA synthesis support,
+peripherals, interrupts, exceptions, and CSR support.

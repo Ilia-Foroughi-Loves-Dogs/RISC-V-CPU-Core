@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean asm-to-mem verify-mem regenerate-programs test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean formal-pc formal-regfile formal-alu formal-all formal-clean asm-to-mem verify-mem regenerate-programs test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -50,6 +50,7 @@ PIPELINE_PROGRAM_ARG = +PROGRAM=$(if $(PROGRAM),$(PROGRAM),tests/programs/pipeli
 VERILATOR = verilator
 VERILATOR_FLAGS = --lint-only -Wall --timing -sv
 VERILATOR_BUILD_FLAGS = --cc -Wall --timing -sv
+SBY = sby
 
 define RUN_CORE_PROGRAM
 	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
@@ -82,6 +83,11 @@ help:
 	@echo "  make cocotb-register-file         Run the register file cocotb test"
 	@echo "  make cocotb-immgen                Run the immediate generator cocotb test"
 	@echo "  make cocotb-clean                 Remove cocotb generated outputs"
+	@echo "  make formal-all                   Run optional SymbiYosys formal checks"
+	@echo "  make formal-pc                    Run program counter formal checks"
+	@echo "  make formal-regfile               Run register file formal checks"
+	@echo "  make formal-alu                   Run ALU formal checks"
+	@echo "  make formal-clean                 Remove formal generated outputs"
 	@echo "  make verify-mem                   Check .asm/.mem program files"
 	@echo "  make regenerate-programs          Regenerate tests/programs/*.mem from .asm"
 	@echo "  make asm-to-mem                   Show assembler usage"
@@ -226,6 +232,22 @@ cocotb-clean:
 	@echo "Cleaning cocotb outputs..."
 	@find cocotb_tests -type d \( -name sim_build -o -name __pycache__ -o -name .pytest_cache \) -prune -exec rm -rf {} +
 	@find cocotb_tests -type f \( -name results.xml -o -name "*.vcd" -o -name "*.fst" -o -name "*.ghw" \) -delete
+
+formal-pc:
+	cd formal/program_counter && $(SBY) -f -d program_counter_formal program_counter.sby
+
+formal-regfile:
+	cd formal/register_file && $(SBY) -f -d register_file_formal register_file.sby
+
+formal-alu:
+	cd formal/alu && $(SBY) -f -d alu_formal alu.sby
+
+formal-all: formal-pc formal-regfile formal-alu
+
+formal-clean:
+	@echo "Cleaning formal outputs..."
+	@find formal -type d -name "*_formal" -prune -exec rm -rf {} +
+	@find formal -type f \( -name "*.vcd" -o -name "*.xml" -o -name "*.log" \) -delete
 
 test-alu-program: sim-dirs
 	$(call RUN_CORE_PROGRAM,tests/programs/alu_tests.mem,alu_tests,CHECK_ALU)
