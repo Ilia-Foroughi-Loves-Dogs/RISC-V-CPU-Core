@@ -12,9 +12,9 @@ single-cycle and pipelined RISC-V CPU cores.
 - Python 3 and cocotb for Python-based module verification
 - GTKWave for waveform viewing
 
-The existing `.mem` files are checked into the repository. A RISC-V assembler
-is useful for future automation, but it is not required for the current test
-flow.
+The existing `.mem` files are checked into the repository. The local helper
+scripts can regenerate and verify the current assembly test programs without
+external assembler dependencies.
 
 ## Major Makefile Targets
 
@@ -33,6 +33,8 @@ flow.
 | `make verilator-lint` | Runs Verilator lint on both CPU cores. |
 | `make verilator-lint-core` | Runs Verilator lint on the single-cycle core. |
 | `make verilator-lint-pipeline` | Runs Verilator lint on the pipelined core. |
+| `make verify-mem` | Checks assembly program files and matching `.mem` images. |
+| `make regenerate-programs` | Regenerates `tests/programs/*.mem` from matching `.asm` files. |
 | `make cocotb-test` | Runs all cocotb Python tests. |
 | `make cocotb-alu` | Runs the ALU cocotb test. |
 | `make cocotb-register-file` | Runs the register file cocotb test. |
@@ -55,12 +57,15 @@ GitHub Actions is configured to run the same full regression used locally:
 
 ```sh
 make test-all
+make verify-mem
 ```
 
 The CI job runs on GitHub-hosted Ubuntu runners and installs Icarus Verilog so
 `iverilog` can compile the SystemVerilog testbenches and `vvp` can execute the
-simulations. Running the full regression in CI helps catch test failures and
-behavioral regressions automatically on pushes and pull requests.
+simulations. CI also runs `make verify-mem` so assembly listings and checked-in
+program images remain synchronized. Running these checks in CI helps catch test
+failures, program-file drift, and behavioral regressions automatically on
+pushes and pull requests.
 
 ## Verilator Checks
 
@@ -85,6 +90,7 @@ Before major commits, run:
 
 ```sh
 make test-all
+make verify-mem
 make verilator-lint
 make cocotb-test
 ```
@@ -275,16 +281,47 @@ Expected final values are summarized in
 The repository stores both forms side by side. The `.asm` files explain intent;
 the `.mem` files are the actual simulation inputs.
 
+## Assembly Program Checks
+
+Run:
+
+```sh
+make verify-mem
+```
+
+This target runs `scripts/verify_mem_files.py`. It checks that every
+`tests/programs/*.asm` file has a matching `.mem` file, each `.mem` file is
+nonempty, each memory line is exactly 8 hex characters, and the generated output
+from `scripts/asm_to_mem.py` matches the checked-in `.mem` file.
+
+Generate one memory image manually:
+
+```sh
+python3 scripts/asm_to_mem.py tests/programs/basic_arithmetic.asm tests/programs/basic_arithmetic.mem
+```
+
+Regenerate all supported program images:
+
+```sh
+make regenerate-programs
+```
+
+These checks are part of CI through `make verify-mem`. They validate program
+files only; they do not replace CPU simulation tests.
+
 ## Adding a New Test Program
 
 1. Add a readable assembly listing under `tests/programs/name.asm`.
-2. Add the matching machine-code memory image under `tests/programs/name.mem`.
-3. Keep the `.mem` file to one 32-bit hexadecimal instruction per line.
-4. Add final expected checks to the relevant testbench if the program should be
+2. Generate the matching memory image with `scripts/asm_to_mem.py` if the
+   program uses supported syntax.
+3. Add the matching machine-code memory image under `tests/programs/name.mem`.
+4. Run `make verify-mem` and keep the `.mem` file to one 32-bit hexadecimal
+   instruction per line.
+5. Add final expected checks to the relevant testbench if the program should be
    self-checking.
-5. Add a Makefile target if the program should become part of the standard
+6. Add a Makefile target if the program should become part of the standard
    workflow.
-6. Document the new program in `tests/programs/README.md` and this file.
+7. Document the new program in `tests/programs/README.md` and this file.
 
 ## Debugging Failed Tests
 

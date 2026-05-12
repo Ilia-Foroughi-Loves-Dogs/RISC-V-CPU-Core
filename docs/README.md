@@ -19,6 +19,8 @@ Core project.
 
 - [testing.md](testing.md): Makefile targets, test programs, `.asm`/`.mem`
   workflow, logs, and debugging tips.
+- [assembler_workflow.md](assembler_workflow.md): Generating and verifying
+  simulation `.mem` files from readable assembly programs.
 - [verilator.md](verilator.md): Verilator lint targets, installation, and CI
   integration.
 - [cocotb.md](cocotb.md): Python-based cocotb verification setup, targets,
@@ -36,4 +38,4 @@ Core project.
   current design.
 - [future_work.md](future_work.md): Possible post-release improvements.
 - [development_plan.md](development_plan.md): Project phase history and current
-  Phase 13 cocotb Python verification status.
+  Phase 14 assembly-to-memory-file workflow status.

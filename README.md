@@ -14,7 +14,7 @@ A portfolio-level SystemVerilog implementation of a small RV32I-inspired
 and documentation for the architecture, datapath, pipeline, testing flow, and
 known limitations.
 
-Current status: **Phase 13 - cocotb Python verification**
+Current status: **Phase 14 - Assembly to memory file workflow**
 
 ## Key Features
 
@@ -34,6 +34,7 @@ Current status: **Phase 13 - cocotb Python verification**
 - Branch and jump flush handling
 - Makefile-based simulation workflow
 - Instruction-level test programs
+- Assembly-to-memory-file helper scripts
 - VCD waveform generation
 - Verilator lint checks
 - cocotb Python verification for key RTL modules
@@ -83,7 +84,7 @@ RISC-V-CPU-Core/
 ├── cocotb_tests/     # Python cocotb module tests
 ├── sim/              # Generated build outputs, logs, and waveforms
 ├── tests/programs/   # Assembly listings and .mem instruction images
-├── scripts/          # Placeholder for future helper scripts
+├── scripts/          # Assembly and verification helper scripts
 ├── Makefile          # Repeatable simulation workflow
 ├── LICENSE
 └── README.md
@@ -143,6 +144,8 @@ make wave-pipeline
 make verilator-lint
 make verilator-lint-core
 make verilator-lint-pipeline
+make verify-mem
+make regenerate-programs
 make cocotb-test
 make cocotb-alu
 make cocotb-register-file
@@ -172,6 +175,7 @@ Individual test groups are available through the Makefile:
 | `make test-pipeline` | Run the baseline pipelined CPU program. |
 | `make test-pipeline-hazards` | Run forwarding, hazard unit, load-use, and flush tests. |
 | `make test-pipeline-control-flow` | Run branch, `jal`, and `jalr` pipeline tests. |
+| `make verify-mem` | Check that `.asm` listings and `.mem` images are valid and in sync. |
 | `make cocotb-test` | Run all Python cocotb module tests. |
 | `make cocotb-alu` | Run the ALU cocotb test. |
 | `make cocotb-register-file` | Run the register file cocotb test. |
@@ -182,6 +186,34 @@ See [docs/testing.md](docs/testing.md) for the complete testing workflow.
 Traditional SystemVerilog testbenches are still included under `tb/` and remain
 part of the main regression. cocotb complements those benches with
 Python-based verification for the ALU, register file, and immediate generator.
+
+## Assembly Test Program Workflow
+
+Readable assembly test programs live next to their simulation memory images in
+`tests/programs/`. The `.asm` files document the intended instructions and
+expected behavior. The `.mem` files contain one 32-bit machine-code word per
+line in hexadecimal, which the instruction memory loads during simulation.
+
+Generate one memory file from assembly:
+
+```sh
+python3 scripts/asm_to_mem.py tests/programs/basic_arithmetic.asm tests/programs/basic_arithmetic.mem
+```
+
+Check all program files:
+
+```sh
+make verify-mem
+```
+
+Regenerate all supported program images:
+
+```sh
+make regenerate-programs
+```
+
+See [docs/assembler_workflow.md](docs/assembler_workflow.md) for supported
+syntax, limitations, and examples.
 
 ## Verilator Checks
 
@@ -211,6 +243,7 @@ runs:
 
 ```sh
 make test-all
+make verify-mem
 make verilator-lint
 make cocotb-test
 ```
@@ -257,6 +290,7 @@ See [docs/waveforms.md](docs/waveforms.md) for useful signals to inspect.
 - [Instruction set](docs/instruction_set.md)
 - [Control signals](docs/control_signals.md)
 - [Testing](docs/testing.md)
+- [Assembly workflow](docs/assembler_workflow.md)
 - [Verilator](docs/verilator.md)
 - [cocotb](docs/cocotb.md)
 - [Continuous integration](docs/ci.md)
@@ -301,10 +335,10 @@ See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
 
 ## Future Improvements
 
-Possible future work includes full RV32I compliance testing, an assembler flow,
-formal verification with SymbiYosys, broader cocotb coverage, better branch
-prediction, cache experiments, a bus interface, FPGA synthesis support, and
-basic peripherals.
+Possible future work includes full RV32I compliance testing, a fuller assembler
+flow, formal verification with SymbiYosys, broader cocotb coverage, better
+branch prediction, cache experiments, a bus interface, FPGA synthesis support,
+and basic peripherals.
 
 See [docs/future_work.md](docs/future_work.md).
 
@@ -317,6 +351,7 @@ See [docs/future_work.md](docs/future_work.md).
 - SystemVerilog RTL design
 - Directed simulation testbenches
 - Python-based cocotb verification
+- Assembly-to-`.mem` program generation and validation
 - Makefile-based verification workflow
 - Verilator lint integration
 - VCD waveform debugging

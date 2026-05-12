@@ -19,16 +19,17 @@ with hazard and control-flow handling.
 | Phase 10 - Final polish and portfolio release | Complete | Polish documentation, test workflow, repository presentation, limitations, and future roadmap. |
 | Phase 11 - GitHub Actions CI | Complete | Add GitHub Actions automation to run the full Makefile regression on pushes and pull requests. |
 | Phase 12 - Verilator support | Complete | Add Verilator lint targets, CI checks, and documentation. |
-| Phase 13 - cocotb Python verification | Current | Add Python-based cocotb tests for key RTL modules and integrate them into CI and documentation. |
+| Phase 13 - cocotb Python verification | Complete | Add Python-based cocotb tests for key RTL modules and integrate them into CI and documentation. |
+| Phase 14 - Assembly to memory file workflow | Current | Add simple assembler tooling, memory-file verification, Make targets, CI checks, and documentation. |
 
 ## Current Phase Note
 
-The current phase adds cocotb Python verification without changing CPU behavior
-or the existing Icarus Verilog test flow. cocotb provides Python-driven checks
-for the ALU, register file, and immediate generator while the SystemVerilog
-testbenches remain part of the main regression.
+The current phase adds a lightweight assembly-to-memory-file workflow without
+changing CPU behavior or the existing Icarus Verilog test flow. The helper
+scripts generate `.mem` files from readable `.asm` programs and verify that
+checked-in program images remain valid and synchronized.
 
 There are still meaningful future improvement opportunities, including full
-RV32I compliance testing, assembler automation, formal
-verification, improved branch prediction, cache experiments, FPGA synthesis
+RV32I compliance testing, a fuller assembler, formal verification, improved
+branch prediction, cache experiments, FPGA synthesis
 support, peripherals, interrupts, exceptions, and CSR support.

@@ -47,6 +47,11 @@ jobs:
       - name: Run all tests
         run: make test-all
 
+      # Program memory files are checked separately so assembly listings and
+      # simulation-ready .mem images stay in sync.
+      - name: Verify assembly memory files
+        run: make verify-mem
+
       # Verilator provides an additional industry-relevant lint pass over the
       # single-cycle and pipelined RTL. Icarus Verilog remains the main
       # simulation engine for the current testbenches.

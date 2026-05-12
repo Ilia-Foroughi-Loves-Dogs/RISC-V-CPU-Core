@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean asm-to-mem verify-mem regenerate-programs test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -82,6 +82,9 @@ help:
 	@echo "  make cocotb-register-file         Run the register file cocotb test"
 	@echo "  make cocotb-immgen                Run the immediate generator cocotb test"
 	@echo "  make cocotb-clean                 Remove cocotb generated outputs"
+	@echo "  make verify-mem                   Check .asm/.mem program files"
+	@echo "  make regenerate-programs          Regenerate tests/programs/*.mem from .asm"
+	@echo "  make asm-to-mem                   Show assembler usage"
 	@echo ""
 	@echo "Module tests:"
 	@echo "  make test-pc                      Test the program counter"
@@ -114,7 +117,23 @@ help:
 
 test: test-all
 
-test-all: test-modules test-core test-programs test-pipeline test-pipeline-hazards test-pipeline-control-flow
+test-all: verify-mem test-modules test-core test-programs test-pipeline test-pipeline-hazards test-pipeline-control-flow
+
+asm-to-mem:
+	@echo "Usage:"
+	@echo "  python3 scripts/asm_to_mem.py INPUT.asm OUTPUT.mem"
+	@echo ""
+	@echo "Example:"
+	@echo "  python3 scripts/asm_to_mem.py tests/programs/basic_arithmetic.asm tests/programs/basic_arithmetic.mem"
+
+verify-mem:
+	python3 scripts/verify_mem_files.py
+
+regenerate-programs:
+	@set -e; for asm in tests/programs/*.asm; do \
+		mem="$${asm%.asm}.mem"; \
+		python3 scripts/asm_to_mem.py "$$asm" "$$mem"; \
+	done
 
 sim-dirs:
 	@mkdir -p $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR)
