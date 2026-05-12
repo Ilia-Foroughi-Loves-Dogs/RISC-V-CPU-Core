@@ -7,9 +7,7 @@ module riscv_core (
     output logic [31:0] writeback_data_debug
 );
 
-    localparam logic [6:0] OPCODE_BRANCH = 7'b1100011;
     localparam logic [6:0] OPCODE_JAL    = 7'b1101111;
-    localparam logic [6:0] OPCODE_JALR   = 7'b1100111;
     localparam logic [6:0] OPCODE_LUI    = 7'b0110111;
     localparam logic [6:0] OPCODE_AUIPC  = 7'b0010111;
 
@@ -23,7 +21,7 @@ module riscv_core (
     logic [2:0] funct3;
     logic [4:0] rs1;
     logic [4:0] rs2;
-    logic [6:0] funct7;
+    logic       funct7_bit5;
 
     logic        reg_write;
     logic        alu_src;
@@ -69,7 +67,7 @@ module riscv_core (
     assign funct3 = instruction[14:12];
     assign rs1    = instruction[19:15];
     assign rs2    = instruction[24:20];
-    assign funct7 = instruction[31:25];
+    assign funct7_bit5 = instruction[30];
 
     control_unit u_control_unit (
         .opcode(opcode),
@@ -86,7 +84,7 @@ module riscv_core (
     );
 
     immediate_generator u_immediate_generator (
-        .instruction(instruction),
+        .instruction(instruction[31:7]),
         .imm_src(imm_src),
         .imm_out(imm_out)
     );
@@ -106,7 +104,7 @@ module riscv_core (
     alu_control u_alu_control (
         .alu_op(alu_op),
         .funct3(funct3),
-        .funct7(funct7),
+        .funct7_bit5(funct7_bit5),
         .alu_control(alu_control_signal)
     );
 
@@ -142,8 +140,8 @@ module riscv_core (
 
         if (branch) begin
             case (funct3)
-                3'b000:  branch_taken = (read_data1 == read_data2);                  // beq
-                3'b001:  branch_taken = (read_data1 != read_data2);                  // bne
+                3'b000:  branch_taken = alu_zero;                              // beq
+                3'b001:  branch_taken = !alu_zero;                             // bne
                 3'b100:  branch_taken = ($signed(read_data1) < $signed(read_data2));  // blt
                 3'b101:  branch_taken = ($signed(read_data1) >= $signed(read_data2)); // bge
                 default: branch_taken = 1'b0;

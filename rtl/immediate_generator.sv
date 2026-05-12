@@ -1,5 +1,5 @@
 module immediate_generator (
-    input  logic [31:0] instruction,
+    input  logic [31:7] instruction,
     input  logic [2:0]  imm_src,
     output logic [31:0] imm_out
 );

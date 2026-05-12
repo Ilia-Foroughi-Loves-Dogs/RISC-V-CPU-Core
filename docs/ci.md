@@ -14,8 +14,8 @@ This project uses GitHub Actions for CI. The workflow is defined in:
 ```
 
 The workflow runs on GitHub-hosted Ubuntu runners. Each run checks out the
-repository, installs the required simulation tools, prints tool versions, and
-executes the full Makefile regression.
+repository, installs the required simulation and lint tools, prints tool
+versions, and executes the full Makefile regression plus Verilator lint checks.
 
 ## Workflow Triggers
 
@@ -31,18 +31,23 @@ The workflow installs:
 - `make`: runs the repository's test targets.
 - `iverilog`: provides Icarus Verilog and `vvp` for compiling and running the
   SystemVerilog simulations.
+- `verilator`: provides linting and additional RTL design checks.
 
-## CI Command
+## CI Commands
 
-The CI regression command is:
+The CI regression commands are:
 
 ```sh
 make test-all
+make verilator-lint
 ```
 
-This target runs module tests, single-cycle core tests, directed instruction
-program tests, pipelined core tests, hazard tests, and pipeline control-flow
-tests.
+`make test-all` runs module tests, single-cycle core tests, directed
+instruction program tests, pipelined core tests, hazard tests, and pipeline
+control-flow tests.
+
+`make verilator-lint` runs Verilator lint on the single-cycle and pipelined RTL
+top-level designs.
 
 ## Viewing Results on GitHub
 
@@ -58,14 +63,18 @@ section.
 
 ## Debugging a Failing CI Run
 
-Start by opening the failed GitHub Actions run and expanding the `Run all
-tests` step. The log should show which Makefile target or simulation failed.
+Start by opening the failed GitHub Actions run and expanding either the `Run
+all tests` step or the `Run Verilator lint` step. The log should show which
+Makefile target, simulation, or lint check failed.
 
 Common debugging steps:
 
 - Reproduce the same command locally with `make test-all`.
+- Reproduce Verilator failures locally with `make verilator-lint`.
 - Run the failing subtarget directly, such as `make test-alu` or
   `make test-pipeline-jal`.
+- For lint-only failures, run `make verilator-lint-core` or
+  `make verilator-lint-pipeline`.
 - Check the generated logs under `sim/logs/`.
 - Confirm that the expected `.mem` program file exists under
   `tests/programs/`.

@@ -13,7 +13,7 @@ module tb_immediate_generator;
     logic [31:0] imm_out;
 
     immediate_generator dut (
-        .instruction(instruction),
+        .instruction(instruction[31:7]),
         .imm_src(imm_src),
         .imm_out(imm_out)
     );

@@ -17,8 +17,6 @@ module riscv_pipelined_core (
     output logic [1:0]  forward_b_debug
 );
 
-    localparam logic [6:0] OPCODE_BRANCH = 7'b1100011;
-    localparam logic [6:0] OPCODE_JAL    = 7'b1101111;
     localparam logic [6:0] OPCODE_LUI    = 7'b0110111;
     localparam logic [6:0] OPCODE_AUIPC  = 7'b0010111;
 
@@ -40,7 +38,7 @@ module riscv_pipelined_core (
     logic [2:0]  id_funct3;
     logic [4:0]  id_rs1;
     logic [4:0]  id_rs2;
-    logic [6:0]  id_funct7;
+    logic        id_funct7_bit5;
     logic        id_reg_write;
     logic        id_alu_src;
     logic        id_mem_read;
@@ -64,7 +62,7 @@ module riscv_pipelined_core (
     logic [4:0]  ex_rs2;
     logic [4:0]  ex_rd;
     logic [2:0]  ex_funct3;
-    logic [6:0]  ex_funct7;
+    logic        ex_funct7_bit5;
     logic [6:0]  ex_opcode;
     logic        ex_reg_write;
     logic        ex_alu_src;
@@ -97,6 +95,7 @@ module riscv_pipelined_core (
     logic [4:0]  mem_rd;
     logic [31:0] mem_branch_target;
     logic        mem_branch_taken;
+    logic        unused_ex_mem_control_flow;
     logic [31:0] mem_immediate;
     logic [6:0]  mem_opcode;
     logic        mem_reg_write;
@@ -185,7 +184,7 @@ module riscv_pipelined_core (
     assign id_funct3 = id_instruction[14:12];
     assign id_rs1    = id_instruction[19:15];
     assign id_rs2    = id_instruction[24:20];
-    assign id_funct7 = id_instruction[31:25];
+    assign id_funct7_bit5 = id_instruction[30];
 
     control_unit u_control_unit (
         .opcode(id_opcode),
@@ -202,7 +201,7 @@ module riscv_pipelined_core (
     );
 
     immediate_generator u_immediate_generator (
-        .instruction(id_instruction),
+        .instruction(id_instruction[31:7]),
         .imm_src(id_imm_src),
         .imm_out(id_immediate)
     );
@@ -235,7 +234,7 @@ module riscv_pipelined_core (
         .rs2_in(id_rs2),
         .rd_in(id_rd),
         .funct3_in(id_funct3),
-        .funct7_in(id_funct7),
+        .funct7_bit5_in(id_funct7_bit5),
         .opcode_in(id_opcode),
         .reg_write_in(id_reg_write),
         .alu_src_in(id_alu_src),
@@ -255,7 +254,7 @@ module riscv_pipelined_core (
         .rs2_out(ex_rs2),
         .rd_out(ex_rd),
         .funct3_out(ex_funct3),
-        .funct7_out(ex_funct7),
+        .funct7_bit5_out(ex_funct7_bit5),
         .opcode_out(ex_opcode),
         .reg_write_out(ex_reg_write),
         .alu_src_out(ex_alu_src),
@@ -274,7 +273,7 @@ module riscv_pipelined_core (
     alu_control u_alu_control (
         .alu_op(ex_alu_op),
         .funct3(ex_funct3),
-        .funct7(ex_funct7),
+        .funct7_bit5(ex_funct7_bit5),
         .alu_control(ex_alu_control_signal)
     );
 
@@ -342,8 +341,8 @@ module riscv_pipelined_core (
 
         if (ex_branch) begin
             case (ex_funct3)
-                3'b000:  ex_branch_taken = (ex_forwarded_data1 == ex_forwarded_data2);
-                3'b001:  ex_branch_taken = (ex_forwarded_data1 != ex_forwarded_data2);
+                3'b000:  ex_branch_taken = ex_alu_zero;
+                3'b001:  ex_branch_taken = !ex_alu_zero;
                 3'b100:  ex_branch_taken = ($signed(ex_forwarded_data1) < $signed(ex_forwarded_data2));
                 3'b101:  ex_branch_taken = ($signed(ex_forwarded_data1) >= $signed(ex_forwarded_data2));
                 default: ex_branch_taken = 1'b0;
@@ -409,6 +408,8 @@ module riscv_pipelined_core (
         .write_data(mem_write_data),
         .read_data(mem_memory_read_data)
     );
+
+    assign unused_ex_mem_control_flow = &{1'b0, mem_branch_target, mem_branch_taken};
 
     // ---------------------------------------------------------------------
     // MEM/WB pipeline register.

@@ -17,16 +17,16 @@ with hazard and control-flow handling.
 | Phase 8 - Hazard detection and forwarding | Complete | Add forwarding, load-use stall handling, and basic flush support. |
 | Phase 9 - Control flow improvements | Complete | Improve branch, `jal`, and `jalr` handling in the pipelined design. |
 | Phase 10 - Final polish and portfolio release | Complete | Polish documentation, test workflow, repository presentation, limitations, and future roadmap. |
-| Phase 11 - GitHub Actions CI | Current | Add GitHub Actions automation to run the full Makefile regression on pushes and pull requests. |
+| Phase 11 - GitHub Actions CI | Complete | Add GitHub Actions automation to run the full Makefile regression on pushes and pull requests. |
+| Phase 12 - Verilator support | Current | Add Verilator lint targets, CI checks, and documentation. |
 
-## Final Phase Note
+## Current Phase Note
 
-The project is ready to present as a portfolio-level educational CPU core. It
-has a clear scope, repeatable tests, readable RTL organization, waveform
-support, documentation for architecture, pipeline behavior, testing, and
-limitations, and GitHub Actions CI configured to run the full regression.
+The current phase adds Verilator support without changing CPU behavior or the
+existing Icarus Verilog test flow. Verilator provides an additional lint and RTL
+elaboration check for both the single-cycle and pipelined designs.
 
 There are still meaningful future improvement opportunities, including full
-RV32I compliance testing, assembler automation, Verilator or cocotb support,
-formal verification, improved branch prediction, cache experiments, FPGA
-synthesis support, peripherals, interrupts, exceptions, and CSR support.
+RV32I compliance testing, assembler automation, cocotb support, formal
+verification, improved branch prediction, cache experiments, FPGA synthesis
+support, peripherals, interrupts, exceptions, and CSR support.

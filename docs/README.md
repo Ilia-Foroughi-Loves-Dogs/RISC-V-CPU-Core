@@ -19,6 +19,8 @@ Core project.
 
 - [testing.md](testing.md): Makefile targets, test programs, `.asm`/`.mem`
   workflow, logs, and debugging tips.
+- [verilator.md](verilator.md): Verilator lint targets, installation, and CI
+  integration.
 - [ci.md](ci.md): GitHub Actions CI workflow, triggers, commands, and
   debugging notes.
 - [waveforms.md](waveforms.md): VCD generation and suggested signals to inspect.
@@ -31,5 +33,5 @@ Core project.
 - [known_limitations.md](known_limitations.md): Honest limitations of the
   current design.
 - [future_work.md](future_work.md): Possible post-release improvements.
-- [development_plan.md](development_plan.md): Project phase history and final
-  Phase 11 CI status.
+- [development_plan.md](development_plan.md): Project phase history and current
+  Phase 12 Verilator support status.

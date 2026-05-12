@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -13,6 +13,10 @@ CORE_RTL = \
 	rtl/alu.sv \
 	rtl/data_memory.sv \
 	rtl/riscv_core.sv
+
+CORE_TOP_RTL = \
+	$(CORE_RTL) \
+	rtl/riscv_top.sv
 
 PIPELINE_RTL = \
 	rtl/program_counter.sv \
@@ -43,6 +47,9 @@ PIPELINE_LOG  = $(SIM_LOG_DIR)/riscv_pipelined_core.log
 PIPELINE_WAVE = $(SIM_WAVE_DIR)/riscv_pipelined_core.vcd
 CORE_PROGRAM_ARG = $(if $(PROGRAM),+PROGRAM=$(PROGRAM) +CHECK_NONE,)
 PIPELINE_PROGRAM_ARG = +PROGRAM=$(if $(PROGRAM),$(PROGRAM),tests/programs/pipeline_basic.mem)
+VERILATOR = verilator
+VERILATOR_FLAGS = --lint-only -Wall --timing -sv
+VERILATOR_BUILD_FLAGS = --cc -Wall --timing -sv
 
 define RUN_CORE_PROGRAM
 	iverilog -g2012 -o $(CORE_OUT) $(CORE_RTL) tb/tb_riscv_core.sv
@@ -64,6 +71,12 @@ help:
 	@echo "  make test-pipeline-control-flow   Run all pipeline branch/jump tests"
 	@echo "  make wave-core                    Generate $(CORE_WAVE)"
 	@echo "  make wave-pipeline                Generate $(PIPELINE_WAVE)"
+	@echo "  make verilator-lint               Run Verilator lint on both CPU cores"
+	@echo "  make verilator-lint-core          Run Verilator lint on the single-cycle core"
+	@echo "  make verilator-lint-pipeline      Run Verilator lint on the pipelined core"
+	@echo "  make verilator-build-core         Elaborate the single-cycle core with Verilator"
+	@echo "  make verilator-build-pipeline     Elaborate the pipelined core with Verilator"
+	@echo "  make verilator-clean              Remove Verilator generated outputs"
 	@echo ""
 	@echo "Module tests:"
 	@echo "  make test-pc                      Test the program counter"
@@ -155,6 +168,25 @@ wave-core: test-core
 wave-pipeline: test-pipeline
 	@echo "Waveform written to $(PIPELINE_WAVE)"
 
+verilator-lint: verilator-lint-core verilator-lint-pipeline
+
+verilator-lint-core:
+	$(VERILATOR) $(VERILATOR_FLAGS) --top-module riscv_top $(CORE_TOP_RTL)
+
+verilator-lint-pipeline:
+	$(VERILATOR) $(VERILATOR_FLAGS) --top-module riscv_pipelined_top $(PIPELINE_RTL)
+
+verilator-build-core:
+	$(VERILATOR) $(VERILATOR_BUILD_FLAGS) --top-module riscv_top $(CORE_TOP_RTL)
+
+verilator-build-pipeline:
+	$(VERILATOR) $(VERILATOR_BUILD_FLAGS) --top-module riscv_pipelined_top $(PIPELINE_RTL)
+
+verilator-clean:
+	@echo "Cleaning Verilator outputs..."
+	@rm -rf obj_dir
+	@rm -f *.vlt verilator.log
+
 test-alu-program: sim-dirs
 	$(call RUN_CORE_PROGRAM,tests/programs/alu_tests.mem,alu_tests,CHECK_ALU)
 
@@ -212,4 +244,4 @@ clean:
 	@echo "Cleaning generated files..."
 	@find $(SIM_BUILD_DIR) $(SIM_WAVE_DIR) $(SIM_LOG_DIR) -type f ! -name .gitkeep -delete
 	@rm -rf build obj_dir xsim.dir work
-	@rm -f sim/riscv_core.vcd *.vcd *.fst *.ghw *.wdb *.jou *.log *.pb *.o *.out
+	@rm -f sim/riscv_core.vcd *.vcd *.fst *.ghw *.wdb *.jou *.log *.pb *.o *.out *.vlt verilator.log

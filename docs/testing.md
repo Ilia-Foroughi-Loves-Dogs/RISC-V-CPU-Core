@@ -8,6 +8,7 @@ single-cycle and pipelined RISC-V CPU cores.
 - GNU Make
 - Icarus Verilog with SystemVerilog support (`iverilog -g2012`)
 - `vvp`
+- Verilator for linting and additional design checks
 - GTKWave for waveform viewing
 
 The existing `.mem` files are checked into the repository. A RISC-V assembler
@@ -28,6 +29,9 @@ flow.
 | `make test-pipeline-control-flow` | Runs pipelined branch, `jal`, and `jalr` tests. |
 | `make wave-core` | Runs the single-cycle core test and writes a VCD file. |
 | `make wave-pipeline` | Runs the pipelined core test and writes a VCD file. |
+| `make verilator-lint` | Runs Verilator lint on both CPU cores. |
+| `make verilator-lint-core` | Runs Verilator lint on the single-cycle core. |
+| `make verilator-lint-pipeline` | Runs Verilator lint on the pipelined core. |
 | `make clean` | Removes generated simulation outputs. |
 
 Run the full regression with:
@@ -52,6 +56,32 @@ The CI job runs on GitHub-hosted Ubuntu runners and installs Icarus Verilog so
 `iverilog` can compile the SystemVerilog testbenches and `vvp` can execute the
 simulations. Running the full regression in CI helps catch test failures and
 behavioral regressions automatically on pushes and pull requests.
+
+## Verilator Checks
+
+Verilator provides an additional lint and design-checking pass over the RTL.
+Run both CPU lint checks with:
+
+```sh
+make verilator-lint
+```
+
+Run individual checks with:
+
+```sh
+make verilator-lint-core
+make verilator-lint-pipeline
+```
+
+Verilator checks are not a replacement for simulation tests. The Icarus
+Verilog testbenches still provide the main behavioral regression coverage.
+
+Before major commits, run:
+
+```sh
+make test-all
+make verilator-lint
+```
 
 ## Module Tests
 

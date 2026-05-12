@@ -13,6 +13,8 @@ sim/logs/*
 *.wdb
 *.jou
 *.log
+*.vlt
+verilator.log
 *.pb
 transcript
 xsim.dir/

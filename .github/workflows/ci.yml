@@ -22,15 +22,22 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y iverilog make
+          sudo apt-get install -y iverilog make verilator
 
       - name: Show tool versions
         run: |
           make --version
           iverilog -V
           vvp -V
+          verilator --version
 
       # The Makefile's test-all target is the full regression, so CI runs it
       # to catch simulation regressions on pushes and pull requests.
       - name: Run all tests
         run: make test-all
+
+      # Verilator provides an additional industry-relevant lint pass over the
+      # single-cycle and pipelined RTL. Icarus Verilog remains the main
+      # simulation engine for the current testbenches.
+      - name: Run Verilator lint
+        run: make verilator-lint

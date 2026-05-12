@@ -4,9 +4,12 @@ module instruction_memory (
 );
 
     localparam int MEM_WORDS = 1024;
+    localparam int ADDR_WIDTH = $clog2(MEM_WORDS);
     localparam logic [31:0] NOP = 32'h0000_0013; // addi x0, x0, 0
 
     logic [31:0] memory [0:MEM_WORDS-1];
+    logic [ADDR_WIDTH-1:0] word_index;
+    logic unused_address_bits;
     string program_path;
     integer i;
     integer program_file;
@@ -45,6 +48,8 @@ module instruction_memory (
     end
 
     // Instructions are word-aligned, so bits [1:0] are ignored.
-    assign instruction = memory[address[31:2]];
+    assign word_index = address[ADDR_WIDTH+1:2];
+    assign unused_address_bits = &{1'b0, address[31:ADDR_WIDTH+2], address[1:0]};
+    assign instruction = memory[word_index];
 
 endmodule

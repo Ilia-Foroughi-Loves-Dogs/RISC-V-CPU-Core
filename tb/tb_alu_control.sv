@@ -26,7 +26,7 @@ module tb_alu_control;
     alu_control dut (
         .alu_op(alu_op),
         .funct3(funct3),
-        .funct7(funct7),
+        .funct7_bit5(funct7[5]),
         .alu_control(alu_control)
     );
 

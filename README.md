@@ -4,6 +4,7 @@
 
 ![Language: SystemVerilog](https://img.shields.io/badge/Language-SystemVerilog-blue)
 ![Simulation: Icarus Verilog](https://img.shields.io/badge/Simulation-Icarus%20Verilog-green)
+![Lint: Verilator](https://img.shields.io/badge/Lint-Verilator-orange)
 ![Status: Educational / Portfolio Project](https://img.shields.io/badge/Status-Educational%20%2F%20Portfolio%20Project-lightgrey)
 
 A portfolio-level SystemVerilog implementation of a small RV32I-inspired
@@ -12,7 +13,7 @@ A portfolio-level SystemVerilog implementation of a small RV32I-inspired
 and documentation for the architecture, datapath, pipeline, testing flow, and
 known limitations.
 
-Current status: **Phase 11 - GitHub Actions CI**
+Current status: **Phase 12 - Verilator support**
 
 ## Key Features
 
@@ -33,6 +34,7 @@ Current status: **Phase 11 - GitHub Actions CI**
 - Makefile-based simulation workflow
 - Instruction-level test programs
 - VCD waveform generation
+- Verilator lint checks
 
 ## Architecture Overview
 
@@ -84,13 +86,35 @@ RISC-V-CPU-Core/
 └── README.md
 ```
 
+## Toolchain
+
+The primary simulation flow uses:
+
+- GNU Make
+- Icarus Verilog with SystemVerilog support (`iverilog -g2012`)
+- `vvp`
+
+Additional design checking uses:
+
+- Verilator for linting and RTL elaboration checks
+- GTKWave for optional waveform viewing
+
+Icarus Verilog is used for the main testbench simulations. Verilator is used
+for linting and additional design checking.
+
 ## Quick Start
 
-Install GNU Make, Icarus Verilog with SystemVerilog support, and `vvp`, then
-run the full regression:
+Install GNU Make, Icarus Verilog with SystemVerilog support, and `vvp`, then run
+the full regression:
 
 ```sh
 make test-all
+```
+
+If Verilator is installed, run the RTL lint checks:
+
+```sh
+make verilator-lint
 ```
 
 Useful commands:
@@ -104,6 +128,9 @@ make test-pipeline-hazards
 make test-pipeline-control-flow
 make wave-core
 make wave-pipeline
+make verilator-lint
+make verilator-lint-core
+make verilator-lint-pipeline
 make clean
 ```
 
@@ -132,13 +159,35 @@ Individual test groups are available through the Makefile:
 
 See [docs/testing.md](docs/testing.md) for the complete testing workflow.
 
+## Verilator Checks
+
+Run Verilator lint on both CPU implementations:
+
+```sh
+make verilator-lint
+```
+
+Individual lint targets are also available:
+
+```sh
+make verilator-lint-core
+make verilator-lint-pipeline
+```
+
+Verilator checks are additional RTL quality checks. They do not replace the
+Icarus Verilog simulation tests.
+
+See [docs/verilator.md](docs/verilator.md) for the full Verilator guide.
+
 ## Continuous Integration
 
 GitHub Actions is configured to run automatically on every push and pull
-request. The CI workflow installs Icarus Verilog and GNU Make, then runs:
+request. The CI workflow installs Icarus Verilog, Verilator, and GNU Make, then
+runs:
 
 ```sh
 make test-all
+make verilator-lint
 ```
 
 The workflow file is located at
@@ -183,6 +232,7 @@ See [docs/waveforms.md](docs/waveforms.md) for useful signals to inspect.
 - [Instruction set](docs/instruction_set.md)
 - [Control signals](docs/control_signals.md)
 - [Testing](docs/testing.md)
+- [Verilator](docs/verilator.md)
 - [Continuous integration](docs/ci.md)
 - [Waveforms](docs/waveforms.md)
 - [Project summary](docs/project_summary.md)
@@ -226,9 +276,9 @@ See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
 ## Future Improvements
 
 Possible future work includes full RV32I compliance testing, an assembler flow,
-Verilator or cocotb support, formal verification with SymbiYosys, better branch
-prediction, cache experiments, a bus interface, FPGA synthesis support, and
-basic peripherals.
+cocotb support, formal verification with SymbiYosys, better branch prediction,
+cache experiments, a bus interface, FPGA synthesis support, and basic
+peripherals.
 
 See [docs/future_work.md](docs/future_work.md).
 
@@ -241,6 +291,7 @@ See [docs/future_work.md](docs/future_work.md).
 - SystemVerilog RTL design
 - Directed simulation testbenches
 - Makefile-based verification workflow
+- Verilator lint integration
 - VCD waveform debugging
 - Technical documentation for a hardware project
 
