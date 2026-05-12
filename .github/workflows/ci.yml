@@ -10,12 +10,17 @@ on:
 
 jobs:
   test:
-    name: Run SystemVerilog Tests
+    name: Run Verification
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
       # Icarus Verilog provides iverilog and vvp, which compile and run the
       # SystemVerilog testbenches used by this CPU core project.
@@ -24,12 +29,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y iverilog make verilator
 
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install -r requirements.txt
+
       - name: Show tool versions
         run: |
           make --version
           iverilog -V
           vvp -V
           verilator --version
+          python3 --version
+          python3 -m pip --version
 
       # The Makefile's test-all target is the full regression, so CI runs it
       # to catch simulation regressions on pushes and pull requests.
@@ -41,3 +52,8 @@ jobs:
       # simulation engine for the current testbenches.
       - name: Run Verilator lint
         run: make verilator-lint
+
+      # cocotb adds Python-driven module verification while the legacy
+      # SystemVerilog testbenches remain part of the main regression.
+      - name: Run cocotb tests
+        run: make cocotb-test

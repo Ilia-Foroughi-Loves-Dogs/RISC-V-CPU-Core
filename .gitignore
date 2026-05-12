@@ -44,6 +44,12 @@ obj_dir/
 # Python cache files
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# cocotb outputs
+sim_build/
+results.xml
+*.xml
 
 # macOS files
 .DS_Store

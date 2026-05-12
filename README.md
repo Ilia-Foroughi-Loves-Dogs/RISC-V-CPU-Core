@@ -5,6 +5,7 @@
 ![Language: SystemVerilog](https://img.shields.io/badge/Language-SystemVerilog-blue)
 ![Simulation: Icarus Verilog](https://img.shields.io/badge/Simulation-Icarus%20Verilog-green)
 ![Lint: Verilator](https://img.shields.io/badge/Lint-Verilator-orange)
+![Verification: cocotb](https://img.shields.io/badge/Verification-cocotb-blueviolet)
 ![Status: Educational / Portfolio Project](https://img.shields.io/badge/Status-Educational%20%2F%20Portfolio%20Project-lightgrey)
 
 A portfolio-level SystemVerilog implementation of a small RV32I-inspired
@@ -13,7 +14,7 @@ A portfolio-level SystemVerilog implementation of a small RV32I-inspired
 and documentation for the architecture, datapath, pipeline, testing flow, and
 known limitations.
 
-Current status: **Phase 12 - Verilator support**
+Current status: **Phase 13 - cocotb Python verification**
 
 ## Key Features
 
@@ -35,6 +36,7 @@ Current status: **Phase 12 - Verilator support**
 - Instruction-level test programs
 - VCD waveform generation
 - Verilator lint checks
+- cocotb Python verification for key RTL modules
 
 ## Architecture Overview
 
@@ -78,6 +80,7 @@ RISC-V-CPU-Core/
 ├── docs/             # Architecture, pipeline, testing, waveform, and release docs
 ├── rtl/              # SystemVerilog RTL modules
 ├── tb/               # SystemVerilog testbenches
+├── cocotb_tests/     # Python cocotb module tests
 ├── sim/              # Generated build outputs, logs, and waveforms
 ├── tests/programs/   # Assembly listings and .mem instruction images
 ├── scripts/          # Placeholder for future helper scripts
@@ -98,9 +101,11 @@ Additional design checking uses:
 
 - Verilator for linting and RTL elaboration checks
 - GTKWave for optional waveform viewing
+- Python 3 and cocotb for Python-driven RTL verification
 
-Icarus Verilog is used for the main testbench simulations. Verilator is used
-for linting and additional design checking.
+Icarus Verilog is used for the main SystemVerilog testbench simulations.
+Verilator is used for linting and additional design checking. cocotb adds
+Python-based verification for selected key modules.
 
 ## Quick Start
 
@@ -117,6 +122,13 @@ If Verilator is installed, run the RTL lint checks:
 make verilator-lint
 ```
 
+If Python dependencies are installed, run the cocotb tests:
+
+```sh
+python3 -m pip install -r requirements.txt
+make cocotb-test
+```
+
 Useful commands:
 
 ```sh
@@ -131,6 +143,10 @@ make wave-pipeline
 make verilator-lint
 make verilator-lint-core
 make verilator-lint-pipeline
+make cocotb-test
+make cocotb-alu
+make cocotb-register-file
+make cocotb-immgen
 make clean
 ```
 
@@ -156,8 +172,16 @@ Individual test groups are available through the Makefile:
 | `make test-pipeline` | Run the baseline pipelined CPU program. |
 | `make test-pipeline-hazards` | Run forwarding, hazard unit, load-use, and flush tests. |
 | `make test-pipeline-control-flow` | Run branch, `jal`, and `jalr` pipeline tests. |
+| `make cocotb-test` | Run all Python cocotb module tests. |
+| `make cocotb-alu` | Run the ALU cocotb test. |
+| `make cocotb-register-file` | Run the register file cocotb test. |
+| `make cocotb-immgen` | Run the immediate generator cocotb test. |
 
 See [docs/testing.md](docs/testing.md) for the complete testing workflow.
+
+Traditional SystemVerilog testbenches are still included under `tb/` and remain
+part of the main regression. cocotb complements those benches with
+Python-based verification for the ALU, register file, and immediate generator.
 
 ## Verilator Checks
 
@@ -188,6 +212,7 @@ runs:
 ```sh
 make test-all
 make verilator-lint
+make cocotb-test
 ```
 
 The workflow file is located at
@@ -233,6 +258,7 @@ See [docs/waveforms.md](docs/waveforms.md) for useful signals to inspect.
 - [Control signals](docs/control_signals.md)
 - [Testing](docs/testing.md)
 - [Verilator](docs/verilator.md)
+- [cocotb](docs/cocotb.md)
 - [Continuous integration](docs/ci.md)
 - [Waveforms](docs/waveforms.md)
 - [Project summary](docs/project_summary.md)
@@ -276,9 +302,9 @@ See [docs/known_limitations.md](docs/known_limitations.md) for more detail.
 ## Future Improvements
 
 Possible future work includes full RV32I compliance testing, an assembler flow,
-cocotb support, formal verification with SymbiYosys, better branch prediction,
-cache experiments, a bus interface, FPGA synthesis support, and basic
-peripherals.
+formal verification with SymbiYosys, broader cocotb coverage, better branch
+prediction, cache experiments, a bus interface, FPGA synthesis support, and
+basic peripherals.
 
 See [docs/future_work.md](docs/future_work.md).
 
@@ -290,6 +316,7 @@ See [docs/future_work.md](docs/future_work.md).
 - Pipeline registers, forwarding, stalls, and flushes
 - SystemVerilog RTL design
 - Directed simulation testbenches
+- Python-based cocotb verification
 - Makefile-based verification workflow
 - Verilator lint integration
 - VCD waveform debugging

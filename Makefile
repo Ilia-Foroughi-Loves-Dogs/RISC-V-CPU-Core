@@ -1,4 +1,4 @@
-.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
+.PHONY: help clean test test-all test-core test-pipeline wave-core wave-pipeline verilator-lint verilator-lint-core verilator-lint-pipeline verilator-build-core verilator-build-pipeline verilator-clean cocotb-alu cocotb-register-file cocotb-immgen cocotb-test cocotb-clean test-forwarding-unit test-hazard-unit test-pipeline-forwarding test-pipeline-load-use test-pipeline-branch-flush test-pipeline-hazards test-pipeline-branch-taken test-pipeline-branch-not-taken test-pipeline-jal test-pipeline-jalr test-pipeline-control-flow test-pc test-regfile test-alu test-immgen test-control test-alu-control test-dmem test-modules test-alu-program test-immediate-program test-load-store-program test-branch-program test-jump-program test-upper-program test-full-program test-programs sim-dirs
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -77,6 +77,11 @@ help:
 	@echo "  make verilator-build-core         Elaborate the single-cycle core with Verilator"
 	@echo "  make verilator-build-pipeline     Elaborate the pipelined core with Verilator"
 	@echo "  make verilator-clean              Remove Verilator generated outputs"
+	@echo "  make cocotb-test                  Run all cocotb Python tests"
+	@echo "  make cocotb-alu                   Run the ALU cocotb test"
+	@echo "  make cocotb-register-file         Run the register file cocotb test"
+	@echo "  make cocotb-immgen                Run the immediate generator cocotb test"
+	@echo "  make cocotb-clean                 Remove cocotb generated outputs"
 	@echo ""
 	@echo "Module tests:"
 	@echo "  make test-pc                      Test the program counter"
@@ -186,6 +191,22 @@ verilator-clean:
 	@echo "Cleaning Verilator outputs..."
 	@rm -rf obj_dir
 	@rm -f *.vlt verilator.log
+
+cocotb-alu:
+	$(MAKE) -C cocotb_tests/alu
+
+cocotb-register-file:
+	$(MAKE) -C cocotb_tests/register_file
+
+cocotb-immgen:
+	$(MAKE) -C cocotb_tests/immediate_generator
+
+cocotb-test: cocotb-alu cocotb-register-file cocotb-immgen
+
+cocotb-clean:
+	@echo "Cleaning cocotb outputs..."
+	@find cocotb_tests -type d \( -name sim_build -o -name __pycache__ -o -name .pytest_cache \) -prune -exec rm -rf {} +
+	@find cocotb_tests -type f \( -name results.xml -o -name "*.vcd" -o -name "*.fst" -o -name "*.ghw" \) -delete
 
 test-alu-program: sim-dirs
 	$(call RUN_CORE_PROGRAM,tests/programs/alu_tests.mem,alu_tests,CHECK_ALU)

@@ -9,6 +9,7 @@ single-cycle and pipelined RISC-V CPU cores.
 - Icarus Verilog with SystemVerilog support (`iverilog -g2012`)
 - `vvp`
 - Verilator for linting and additional design checks
+- Python 3 and cocotb for Python-based module verification
 - GTKWave for waveform viewing
 
 The existing `.mem` files are checked into the repository. A RISC-V assembler
@@ -32,6 +33,10 @@ flow.
 | `make verilator-lint` | Runs Verilator lint on both CPU cores. |
 | `make verilator-lint-core` | Runs Verilator lint on the single-cycle core. |
 | `make verilator-lint-pipeline` | Runs Verilator lint on the pipelined core. |
+| `make cocotb-test` | Runs all cocotb Python tests. |
+| `make cocotb-alu` | Runs the ALU cocotb test. |
+| `make cocotb-register-file` | Runs the register file cocotb test. |
+| `make cocotb-immgen` | Runs the immediate generator cocotb test. |
 | `make clean` | Removes generated simulation outputs. |
 
 Run the full regression with:
@@ -81,7 +86,44 @@ Before major commits, run:
 ```sh
 make test-all
 make verilator-lint
+make cocotb-test
 ```
+
+## cocotb Python Verification
+
+cocotb adds Python-driven checks for selected datapath modules. Install the
+Python dependencies with:
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
+Run all cocotb tests:
+
+```sh
+make cocotb-test
+```
+
+Run individual tests:
+
+```sh
+make cocotb-alu
+make cocotb-register-file
+make cocotb-immgen
+```
+
+The ALU cocotb test checks ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, signed SLT,
+unsigned SLTU, and zero flag behavior.
+
+The register file cocotb test checks reset clearing, normal write/read
+behavior, `x0` always reading zero, ignored writes to `x0`, and both read
+ports.
+
+The immediate generator cocotb test checks I-type, S-type, B-type, U-type, and
+J-type immediates, including sign extension.
+
+These Python tests complement the SystemVerilog testbenches. They do not
+replace the existing `tb/` tests or the full CPU program regression.
 
 ## Module Tests
 

@@ -18,15 +18,17 @@ with hazard and control-flow handling.
 | Phase 9 - Control flow improvements | Complete | Improve branch, `jal`, and `jalr` handling in the pipelined design. |
 | Phase 10 - Final polish and portfolio release | Complete | Polish documentation, test workflow, repository presentation, limitations, and future roadmap. |
 | Phase 11 - GitHub Actions CI | Complete | Add GitHub Actions automation to run the full Makefile regression on pushes and pull requests. |
-| Phase 12 - Verilator support | Current | Add Verilator lint targets, CI checks, and documentation. |
+| Phase 12 - Verilator support | Complete | Add Verilator lint targets, CI checks, and documentation. |
+| Phase 13 - cocotb Python verification | Current | Add Python-based cocotb tests for key RTL modules and integrate them into CI and documentation. |
 
 ## Current Phase Note
 
-The current phase adds Verilator support without changing CPU behavior or the
-existing Icarus Verilog test flow. Verilator provides an additional lint and RTL
-elaboration check for both the single-cycle and pipelined designs.
+The current phase adds cocotb Python verification without changing CPU behavior
+or the existing Icarus Verilog test flow. cocotb provides Python-driven checks
+for the ALU, register file, and immediate generator while the SystemVerilog
+testbenches remain part of the main regression.
 
 There are still meaningful future improvement opportunities, including full
-RV32I compliance testing, assembler automation, cocotb support, formal
+RV32I compliance testing, assembler automation, formal
 verification, improved branch prediction, cache experiments, FPGA synthesis
 support, peripherals, interrupts, exceptions, and CSR support.

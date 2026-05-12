@@ -2,8 +2,9 @@
 
 Continuous integration, or CI, means running automated checks whenever changes
 are pushed to the repository or proposed in a pull request. For this project,
-CI verifies that the SystemVerilog simulation regression can still compile and
-run from a clean GitHub-hosted environment.
+CI verifies that the SystemVerilog simulation regression, Verilator lint pass,
+and cocotb Python tests can still compile and run from a clean GitHub-hosted
+environment.
 
 ## GitHub Actions Workflow
 
@@ -14,8 +15,9 @@ This project uses GitHub Actions for CI. The workflow is defined in:
 ```
 
 The workflow runs on GitHub-hosted Ubuntu runners. Each run checks out the
-repository, installs the required simulation and lint tools, prints tool
-versions, and executes the full Makefile regression plus Verilator lint checks.
+repository, installs the required simulation, lint, and Python tools, prints
+tool versions, and executes the full Makefile regression, Verilator lint
+checks, and cocotb tests.
 
 ## Workflow Triggers
 
@@ -32,6 +34,8 @@ The workflow installs:
 - `iverilog`: provides Icarus Verilog and `vvp` for compiling and running the
   SystemVerilog simulations.
 - `verilator`: provides linting and additional RTL design checks.
+- `python3` and `pip`: provided by `actions/setup-python` and used to install
+  the cocotb Python dependencies from `requirements.txt`.
 
 ## CI Commands
 
@@ -40,6 +44,7 @@ The CI regression commands are:
 ```sh
 make test-all
 make verilator-lint
+make cocotb-test
 ```
 
 `make test-all` runs module tests, single-cycle core tests, directed
@@ -48,6 +53,9 @@ control-flow tests.
 
 `make verilator-lint` runs Verilator lint on the single-cycle and pipelined RTL
 top-level designs.
+
+`make cocotb-test` runs Python cocotb tests for the ALU, register file, and
+immediate generator.
 
 ## Viewing Results on GitHub
 
@@ -63,16 +71,18 @@ section.
 
 ## Debugging a Failing CI Run
 
-Start by opening the failed GitHub Actions run and expanding either the `Run
-all tests` step or the `Run Verilator lint` step. The log should show which
-Makefile target, simulation, or lint check failed.
+Start by opening the failed GitHub Actions run and expanding the `Run all
+tests`, `Run Verilator lint`, or `Run cocotb tests` step. The log should show
+which Makefile target, simulation, Python test, or lint check failed.
 
 Common debugging steps:
 
 - Reproduce the same command locally with `make test-all`.
 - Reproduce Verilator failures locally with `make verilator-lint`.
+- Reproduce cocotb failures locally with `make cocotb-test`.
 - Run the failing subtarget directly, such as `make test-alu` or
   `make test-pipeline-jal`.
+- Run the failing cocotb subtarget directly, such as `make cocotb-alu`.
 - For lint-only failures, run `make verilator-lint-core` or
   `make verilator-lint-pipeline`.
 - Check the generated logs under `sim/logs/`.
